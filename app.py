@@ -567,4 +567,101 @@ def status():
     email = request.json.get('email')
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
-    c.execute("SELECT status, balance, profit_per_hour, tap_power, card1, card2, card3, card4, ref_count, last_sync FROM users WHERE email
+    c.execute("SELECT status, balance, profit_per_hour, tap_power, card1, card2, card3, card4, ref_count, last_sync FROM users WHERE email=?", (email,))
+    user = c.fetchone()
+    
+    if user:
+        status, balance, profit, tap_power, c1, c2, c3, c4, ref_count, last_sync = user
+        now = time.time()
+        
+        if status == 'approved' and last_sync > 0:
+            elapsed_hours = (now - last_sync) / 3600.0
+            offline_gain = elapsed_hours * profit
+            balance += offline_gain
+            
+        c.execute("UPDATE users SET balance = ?, last_sync = ? WHERE email=?", (balance, now, email))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "status": status, "balance": balance, "profit_per_hour": profit, "tap_power": tap_power,
+            "card1": c1, "card2": c2, "card3": c3, "card4": c4, "ref_count": ref_count
+        })
+    conn.close()
+    return jsonify({"status": "not_found"})
+
+@app.route('/api/tap', methods=['POST'])
+def tap():
+    email = request.json.get('email')
+    power = request.json.get('power', 0.001)
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute("UPDATE users SET balance = balance + ? WHERE email=?", (power, email))
+    conn.commit()
+    c.execute("SELECT balance FROM users WHERE email=?", (email,))
+    new_balance = c.fetchone()[0]
+    conn.close()
+    return jsonify({"success": True, "balance": new_balance})
+
+@app.route('/api/upgrade', methods=['POST'])
+def upgrade():
+    email = request.json.get('email')
+    utype = request.json.get('type')
+    cost = request.json.get('cost')
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute("SELECT balance FROM users WHERE email=?", (email,))
+    bal = c.fetchone()[0]
+    
+    if bal >= cost:
+        profit_add = 0
+        if utype == 'card1': profit_add = 10
+        elif utype == 'card2': profit_add = 60
+        elif utype == 'card3': profit_add = 300
+        elif utype == 'card4': profit_add = 1500
+
+        c.execute(f"UPDATE users SET balance = balance - ?, profit_per_hour = profit_per_hour + ?, {utype} = {utype} + 1 WHERE email=?", (cost, profit_add, email))
+        conn.commit()
+        
+        c.execute("SELECT balance, profit_per_hour, tap_power, card1, card2, card3, card4, ref_count FROM users WHERE email=?", (email,))
+        user = c.fetchone()
+        conn.close()
+        return jsonify({
+            "success": True, "balance": user[0], "profit_per_hour": user[1], "tap_power": user[2],
+            "card1": user[3], "card2": user[4], "card3": user[5], "card4": user[6], "ref_count": user[7]
+        })
+    conn.close()
+    return jsonify({"success": False, "message": "Not enough TTN!"})
+
+@app.route('/api/cipher', methods=['POST'])
+def cipher():
+    email = request.json.get('email')
+    code = request.json.get('code').upper()
+    
+    if code == "TITAN":
+        conn = sqlite3.connect('game.db')
+        c = conn.cursor()
+        c.execute("UPDATE users SET balance = balance + 500.0 WHERE email=?", (email,))
+        conn.commit()
+        c.execute("SELECT balance FROM users WHERE email=?", (email,))
+        new_bal = c.fetchone()[0]
+        conn.close()
+        return jsonify({"success": True, "balance": new_bal})
+    
+    return jsonify({"success": False, "message": "Wrong code!"})
+
+@app.route('/api/leaderboard')
+def leaderboard():
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute("SELECT name, balance FROM users WHERE status='approved' ORDER BY balance DESC LIMIT 10")
+    users = [{"name": u[0], "balance": u[1]} for u in c.fetchall()]
+    conn.close()
+    return jsonify(users)
+
+def run_bot():
+    bot.polling(none_stop=True)
+
+if __name__ == '__main__':
+    threading.Thread(target=run_bot, daemon=True).start()
+    app.run(host='0.0.0.0', port=5000)
