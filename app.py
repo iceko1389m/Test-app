@@ -171,9 +171,8 @@ html_game = """
   .app-container { width: 100%; max-width: 420px; padding: 20px; text-align: center; position: relative; }
   .lang-toggle { position: absolute; top: 20px; left: 20px; background: var(--card); border: 1px solid #2a3441; color: white; padding: 5px 10px; border-radius: 8px; cursor: pointer; font-size: 12px; z-index: 100; }
   
-  .screen { display: none; animation: fadeIn 0.3s ease-out; }
+  .screen { display: none; }
   .active { display: block; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   
   h1 { font-size: 24px; font-weight: 800; color: var(--primary); margin-bottom: 20px; margin-top: 30px; }
   input { width:100%; padding:15px; margin-bottom:15px; border-radius:12px; border:1px solid #2a3441; background:var(--card); color:white; font-family: inherit; }
@@ -188,9 +187,6 @@ html_game = """
   .tap-btn { width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, #ffaa00, #b37700); display: flex; justify-content: center; align-items: center; box-shadow: 0 0 40px rgba(255, 170, 0, 0.4); border: 4px solid #fff; transition: 0.1s; cursor: pointer; font-size: 80px; z-index: 2; user-select: none; }
   .tap-btn:active { transform: scale(0.9); box-shadow: 0 0 60px rgba(255, 170, 0, 0.8); }
   
-  .particle { position: absolute; width: 10px; height: 10px; background: gold; border-radius: 50%; pointer-events: none; animation: fly 0.5s ease-out forwards; }
-  @keyframes fly { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--x), var(--y)) scale(0); opacity: 0; } }
-
   .cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .upgrade-card { background: var(--card); padding: 15px; border-radius: 15px; border: 1px solid #2a3441; text-align: left; cursor: pointer; }
   body[dir="rtl"] .upgrade-card { text-align: right; }
@@ -217,122 +213,122 @@ html_game = """
   <div id="auth-screen" class="screen active">
     <div id="login-form">
       <h1>🛡️ TitanTap</h1>
-      <input type="email" id="login_email" data-fa="ایمیل" data-en="Email Address" placeholder="ایمیل">
-      <input type="password" id="login_password" data-fa="رمز عبور" data-en="Password" placeholder="رمز عبور">
-      <button class="btn-action" onclick="login()" data-fa="ورود" data-en="Login">ورود</button>
-      <br><span class="link-text" onclick="showForm('register-form')" data-fa="حساب ندارید؟ ثبت‌نام کنید" data-en="Don't have an account? Sign up">حساب ندارید؟ ثبت‌نام کنید</span><br>
-      <span class="link-text" onclick="showForm('forgot-form')" style="color:#8892b0;" data-fa="رمز عبور را فراموش کرده‌اید؟" data-en="Forgot Password?">رمز عبور را فراموش کرده‌اید؟</span>
+      <input type="email" id="login_email" placeholder="ایمیل">
+      <input type="password" id="login_password" placeholder="رمز عبور">
+      <button class="btn-action" onclick="login()">ورود</button>
+      <br><span class="link-text" onclick="showForm('register-form')">حساب ندارید؟ ثبت‌نام کنید</span><br>
+      <span class="link-text" onclick="showForm('forgot-form')" style="color:#8892b0;">رمز عبور را فراموش کرده‌اید؟</span>
     </div>
 
     <div id="register-form" style="display:none;">
-      <h1 data-fa="ثبت‌نام" data-en="Sign Up">ثبت‌نام</h1>
-      <input type="email" id="reg_email" data-fa="ایمیل" data-en="Email Address" placeholder="ایمیل">
-      <input type="password" id="reg_password" data-fa="رمز عبور" data-en="Password" placeholder="رمز عبور">
-      <button class="btn-action" onclick="register()" data-fa="ساخت حساب" data-en="Create Account">ساخت حساب</button>
-      <br><span class="link-text" onclick="showForm('login-form')" data-fa="قبلاً ثبت‌نام کرده‌اید؟ وارد شوید" data-en="Already have an account? Login">قبلاً ثبت‌نام کرده‌اید؟ وارد شوید</span>
+      <h1>ثبت‌نام</h1>
+      <input type="email" id="reg_email" placeholder="ایمیل">
+      <input type="password" id="reg_password" placeholder="رمز عبور">
+      <button class="btn-action" onclick="register()">ساخت حساب</button>
+      <br><span class="link-text" onclick="showForm('login-form')">قبلاً ثبت‌نام کرده‌اید؟ وارد شوید</span>
     </div>
 
     <div id="forgot-form" style="display:none;">
-      <h1 data-fa="فراموشی رمز" data-en="Forgot Password">فراموشی رمز</h1>
-      <p style="font-size:13px; color:#8892b0; margin-bottom:15px;" data-fa="رمز جدید به صورت خودکار ساخته می‌شود." data-en="A new password will be generated.">رمز جدید به صورت خودکار ساخته می‌شود.</p>
-      <input type="email" id="forgot_email" data-fa="ایمیل" data-en="Email Address" placeholder="ایمیل">
-      <button class="btn-action" onclick="forgotPass()" data-fa="بازیابی رمز" data-en="Reset Password">بازیابی رمز</button>
-      <br><span class="link-text" onclick="showForm('login-form')" data-fa="بازگشت به صفحه ورود" data-en="Back to Login">بازگشت به صفحه ورود</span>
+      <h1>فراموشی رمز</h1>
+      <p style="font-size:13px; color:#8892b0; margin-bottom:15px;">رمز جدید به صورت خودکار ساخته می‌شود.</p>
+      <input type="email" id="forgot_email" placeholder="ایمیل">
+      <button class="btn-action" onclick="forgotPass()">بازیابی رمز</button>
+      <br><span class="link-text" onclick="showForm('login-form')">بازگشت به صفحه ورود</span>
     </div>
   </div>
 
   <div id="main-app" class="screen">
     <div id="tab-mine" class="tab-content">
       <div class="balance-card">
-        <div style="font-size:14px; color:#8892b0;" data-fa="موجودی شما" data-en="Your Balance">موجودی شما</div>
+        <div style="font-size:14px; color:#8892b0;">موجودی شما</div>
         <div class="balance-value"><span id="balance">0.000</span> <span style="font-size:20px; color:#fff;">TTN</span></div>
-        <div class="profit-hour">+<span id="profit">0.00</span> TTN / <span data-fa="ساعت" data-en="hour">ساعت</span></div>
+        <div class="profit-hour">+<span id="profit">0.00</span> TTN / ساعت</div>
       </div>
       <div class="tap-area" id="tap-area">
         <div class="tap-btn" id="tap-btn" onclick="tap(event)">🛡️</div>
       </div>
-      <button class="btn-action btn-success" onclick="requestWithdraw()" data-fa="درخواست برداشت" data-en="Request Withdraw">درخواست برداشت</button>
+      <button class="btn-action btn-success" onclick="requestWithdraw()">درخواست برداشت</button>
     </div>
 
     <div id="tab-upgrades" class="tab-content" style="display:none;">
-      <h1 data-fa="کارت‌های استخراج" data-en="Mining Cards">کارت‌های استخراج</h1>
+      <h1>کارت‌های استخراج</h1>
       <div class="cards-grid">
-        <div class="upgrade-card" onclick="upgrade('card1')"><h3>🏠 <span data-fa="ماینر خانگی" data-en="Home Miner">ماینر خانگی</span></h3><p>Lvl <span id="lvl_card1">0</span> | +10/hr</p><div class="price">Cost: <span id="cost_card1">100</span></div></div>
-        <div class="upgrade-card" onclick="upgrade('card2')"><h3>☁️ <span data-fa="سرور ابری" data-en="Cloud Server">سرور ابری</span></h3><p>Lvl <span id="lvl_card2">0</span> | +60/hr</p><div class="price">Cost: <span id="cost_card2">500</span></div></div>
-        <div class="upgrade-card" onclick="upgrade('card3')"><h3>🤖 <span data-fa="دیتاسنتر هوش مصنوعی" data-en="AI Datacenter">دیتاسنتر هوش مصنوعی</span></h3><p>Lvl <span id="lvl_card3">0</span> | +300/hr</p><div class="price">Cost: <span id="cost_card3">2000</span></div></div>
-        <div class="upgrade-card" onclick="upgrade('card4')"><h3>⚛️ <span data-fa="ریگ کوانتومی" data-en="Quantum Rig">ریگ کوانتومی</span></h3><p>Lvl <span id="lvl_card4">0</span> | +1500/hr</p><div class="price">Cost: <span id="cost_card4">10000</span></div></div>
+        <div class="upgrade-card" onclick="upgrade('card1')"><h3>🏠 ماینر خانگی</h3><p>Lvl <span id="lvl_card1">0</span> | +10/hr</p><div class="price">Cost: <span id="cost_card1">100</span></div></div>
+        <div class="upgrade-card" onclick="upgrade('card2')"><h3>☁️ سرور ابری</h3><p>Lvl <span id="lvl_card2">0</span> | +60/hr</p><div class="price">Cost: <span id="cost_card2">500</span></div></div>
+        <div class="upgrade-card" onclick="upgrade('card3')"><h3>🤖 دیتاسنتر AI</h3><p>Lvl <span id="lvl_card3">0</span> | +300/hr</p><div class="price">Cost: <span id="cost_card3">2000</span></div></div>
+        <div class="upgrade-card" onclick="upgrade('card4')"><h3>⚛️ ریگ کوانتومی</h3><p>Lvl <span id="lvl_card4">0</span> | +1500/hr</p><div class="price">Cost: <span id="cost_card4">10000</span></div></div>
       </div>
     </div>
 
     <div id="tab-games" class="tab-content" style="display:none;">
-      <h1 data-fa="بازی‌ها و جوایز" data-en="Games & Rewards">بازی‌ها و جوایز</h1>
+      <h1>بازی‌ها</h1>
       <div class="spin-card">
-        <h3>🎡 <span data-fa="گردونه شانس" data-en="Spin The Wheel">گردونه شانس</span></h3>
-        <p style="margin-top:10px; font-size:13px;"><span data-fa="هزینه: ۱۰۰ TTN" data-en="Cost: 100 TTN">هزینه: ۱۰۰ TTN</span></p>
-        <button class="btn-action" onclick="spinWheel()" style="margin-top:10px;" data-fa="بچرخون!" data-en="Spin Now!">بچرخون!</button>
+        <h3>🎡 گردونه شانس</h3>
+        <p style="margin-top:10px; font-size:13px;">هزینه: ۱۰۰ TTN</p>
+        <button class="btn-action" onclick="spinWheel()" style="margin-top:10px;">بچرخون!</button>
       </div>
       <div class="cipher-card">
-        <h3>🎁 <span data-fa="کد روزانه" data-en="Daily Cipher">کد روزانه</span></h3>
-        <p style="font-size:13px; margin-top:5px;" data-fa="کد TITAN را وارد کنید و ۵۰۰ TTN بگیرید!" data-en="Enter TITAN to win 500 TTN!">کد TITAN را وارد کنید و ۵۰۰ TTN بگیرید!</p>
-        <input type="text" id="cipher_input" placeholder="Enter Code" style="margin-top:10px; text-align:center; text-transform:uppercase;">
-        <button class="btn-action" onclick="submitCipher()" data-fa="ارسال کد" data-en="Submit Code">ارسال کد</button>
+        <h3>🎁 کد روزانه</h3>
+        <p style="font-size:13px; margin-top:5px;">کد TITAN را وارد کنید و ۵۰۰ TTN بگیرید!</p>
+        <input type="text" id="cipher_input" placeholder="Enter Code" style="margin-top:10px; text-align:center;">
+        <button class="btn-action" onclick="submitCipher()">ارسال کد</button>
       </div>
     </div>
 
     <div id="tab-friends" class="tab-content" style="display:none;">
-      <h1 data-fa="جوخه (Squad)" data-en="Your Squad">جوخه (Squad)</h1>
+      <h1>جوخه</h1>
       <div class="daily-card">
-        <p data-fa="با هر دعوت ۲۰۰ TTN بگیرید!" data-en="Earn 200 TTN per friend!">با هر دعوت ۲۰۰ TTN بگیرید!</p>
-        <p style="margin-top:10px;"><span data-fa="دوستان دعوت شده:" data-en="Friends Invited:">دوستان دعوت شده:</span> <b id="ref_count" style="color:var(--primary);">0</b></p>
+        <p>با هر دعوت ۲۰۰ TTN بگیرید!</p>
+        <p style="margin-top:10px;">دوستان: <b id="ref_count" style="color:var(--primary);">0</b></p>
         <input type="text" id="ref_link" readonly style="margin-top:15px; text-align:center; color:var(--primary);">
-        <button class="btn-action" onclick="copyLink()" data-fa="کپی لینک دعوت" data-en="Copy Invite Link">کپی لینک دعوت</button>
+        <button class="btn-action" onclick="copyLink()">کپی لینک</button>
       </div>
     </div>
 
     <div id="tab-top" class="tab-content" style="display:none;">
-      <h1 data-fa="لیدربورد" data-en="Leaderboard">لیدربورد</h1>
+      <h1>لیدربورد</h1>
       <div id="leaderboard-list"></div>
     </div>
 
     <div id="tab-profile" class="tab-content" style="display:none;">
-      <h1 data-fa="پروفایل و احراز هویت" data-en="Profile & KYC">پروفایل و احراز هویت</h1>
+      <h1>احراز هویت</h1>
       <div class="kyc-card">
-        <p style="font-size:13px; color:#8892b0; margin-bottom:10px;" data-fa="برای فعالسازی برداشت، احراز هویت کنید." data-en="Complete KYC to unlock withdrawals.">برای فعالسازی برداشت، احراز هویت کنید.</p>
-        <input type="text" id="fname" data-fa="نام واقعی" data-en="Real First Name" placeholder="نام واقعی">
-        <input type="text" id="lname" data-fa="نام خانوادگی" data-en="Real Last Name" placeholder="نام خانوادگی">
-        <input type="text" id="nid" data-fa="کد ملی" data-en="National ID" placeholder="کد ملی">
-        <input type="text" id="phone" data-fa="شماره تماس" data-en="Phone Number" placeholder="شماره تماس">
-        <button class="btn-action btn-success" onclick="submitKYC()" data-fa="ذخیره اطلاعات" data-en="Save KYC Info">ذخیره اطلاعات</button>
+        <p style="font-size:13px; color:#8892b0; margin-bottom:10px;">برای برداشت، احراز هویت کنید.</p>
+        <input type="text" id="fname" placeholder="نام">
+        <input type="text" id="lname" placeholder="نام خانوادگی">
+        <input type="text" id="nid" placeholder="کد ملی">
+        <input type="text" id="phone" placeholder="شماره تماس">
+        <button class="btn-action btn-success" onclick="submitKYC()">ذخیره</button>
       </div>
     </div>
 
     <div class="bottom-nav">
-      <div class="nav-item active" onclick="switchTab('mine', this)"><div class="nav-icon">🪙</div><span data-fa="استخراج" data-en="Mine">استخراج</span></div>
-      <div class="nav-item" onclick="switchTab('upgrades', this)"><div class="nav-icon">🃏</div><span data-fa="کارت‌ها" data-en="Cards">کارت‌ها</span></div>
-      <div class="nav-item" onclick="switchTab('games', this)"><div class="nav-icon">🎮</div><span data-fa="بازی‌ها" data-en="Games">بازی‌ها</span></div>
-      <div class="nav-item" onclick="switchTab('friends', this)"><div class="nav-icon">👥</div><span data-fa="دوستان" data-en="Friends">دوستان</span></div>
-      <div class="nav-item" onclick="switchTab('top', this)"><div class="nav-icon">🏆</div><span data-fa="برترین‌ها" data-en="Top">برترین‌ها</span></div>
-      <div class="nav-item" onclick="switchTab('profile', this)"><div class="nav-icon">👤</div><span data-fa="پروفایل" data-en="Profile">پروفایل</span></div>
+      <div class="nav-item active" onclick="switchTab('mine', this)"><div class="nav-icon">🪙</div><span>استخراج</span></div>
+      <div class="nav-item" onclick="switchTab('upgrades', this)"><div class="nav-icon">🃏</div><span>کارت‌ها</span></div>
+      <div class="nav-item" onclick="switchTab('games', this)"><div class="nav-icon">🎮</div><span>بازی‌ها</span></div>
+      <div class="nav-item" onclick="switchTab('friends', this)"><div class="nav-icon">👥</div><span>دوستان</span></div>
+      <div class="nav-item" onclick="switchTab('top', this)"><div class="nav-icon">🏆</div><span>برترین‌ها</span></div>
+      <div class="nav-item" onclick="switchTab('profile', this)"><div class="nav-icon">👤</div><span>پروفایل</span></div>
     </div>
 
   </div>
 </div>
 
 <script>
-  let userEmail = "";
-  let currentProfit = 0;
-  let currentTapPower = 0.001;
-  let costs = { card1: 100, card2: 500, card3: 2000, card4: 10000 };
-  let currentLang = 'fa';
-  let unsyncedTaps = 0;
-  let audioCtx = null;
+  var userEmail = "";
+  var currentProfit = 0;
+  var currentTapPower = 0.001;
+  var costs = { card1: 100, card2: 500, card3: 2000, card4: 10000 };
+  var currentLang = 'fa';
+  var unsyncedTaps = 0;
+  var audioCtx = null;
 
   function playCoinSound() {
       try {
           if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           if(audioCtx.state === 'suspended') audioCtx.resume();
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
+          var osc = audioCtx.createOscillator();
+          var gain = audioCtx.createGain();
           osc.type = 'sine';
           osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
           osc.frequency.exponentialRampToValueAtTime(1800, audioCtx.currentTime + 0.1);
@@ -348,67 +344,76 @@ html_game = """
   function toggleLang() {
     currentLang = currentLang === 'fa' ? 'en' : 'fa';
     document.body.dir = currentLang === 'fa' ? 'rtl' : 'ltr';
-    document.body.className = currentLang === 'en' ? 'en' : '';
-    
-    document.querySelectorAll('[data-fa]').forEach(el => {
-      if(el.tagName === 'INPUT') {
-        el.placeholder = currentLang === 'fa' ? el.getAttribute('data-fa') : el.getAttribute('data-en');
-      } else {
-        el.innerText = currentLang === 'fa' ? el.getAttribute('data-fa') : el.getAttribute('data-en');
-      }
-    });
   }
 
   function showForm(id) {
-    document.querySelectorAll('#auth-screen > div').forEach(d => d.style.display = 'none');
+    var divs = document.querySelectorAll('#auth-screen > div');
+    for(var i=0; i<divs.length; i++) {
+        divs[i].style.display = 'none';
+    }
     document.getElementById(id).style.display = 'block';
   }
 
-  async function apiCall(endpoint, data) {
-    const res = await fetch(endpoint, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-    return await res.json();
+  function apiCall(endpoint, data, callback) {
+    fetch(endpoint, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) })
+    .then(function(res) { return res.json(); })
+    .then(function(data) { callback(data); })
+    .catch(function(err) { alert("Error: " + err); });
   }
 
-  async function login() {
-    const email = document.getElementById('login_email').value;
-    const password = document.getElementById('login_password').value;
-    if(!email || !password) return alert("Fill all fields");
-    const data = await apiCall('/api/login', {email, password});
-    if(data.success) {
-      userEmail = email;
-      startGame(data.user);
-    } else alert(data.message);
+  function login() {
+    var email = document.getElementById('login_email').value;
+    var password = document.getElementById('login_password').value;
+    if(!email || !password) { alert("Fill all fields"); return; }
+    
+    apiCall('/api/login', {email: email, password: password}, function(data) {
+        if(data.success) {
+            userEmail = email;
+            startGame(data.user);
+        } else {
+            alert(data.message);
+        }
+    });
   }
 
-  async function register() {
-    const email = document.getElementById('reg_email').value;
-    const password = document.getElementById('reg_password').value;
-    if(!email || !password) return alert("Fill all fields");
-    const data = await apiCall('/api/register', {email, password});
-    if(data.success) {
-      userEmail = email;
-      startGame(data.user);
-    } else alert(data.message);
+  function register() {
+    var email = document.getElementById('reg_email').value;
+    var password = document.getElementById('reg_password').value;
+    if(!email || !password) { alert("Fill all fields"); return; }
+    
+    apiCall('/api/register', {email: email, password: password}, function(data) {
+        if(data.success) {
+            userEmail = email;
+            startGame(data.user);
+        } else {
+            alert(data.message);
+        }
+    });
   }
 
-  async function forgotPass() {
-    const email = document.getElementById('forgot_email').value;
-    if(!email) return alert("Enter your email");
-    const data = await apiCall('/api/forgot', {email});
-    if(data.success) alert("رمز جدید شما: " + data.new_password + "\nلطفاً با آن وارد شوید.");
-    else alert(data.message);
+  function forgotPass() {
+    var email = document.getElementById('forgot_email').value;
+    if(!email) { alert("Enter your email"); return; }
+    
+    apiCall('/api/forgot', {email: email}, function(data) {
+        if(data.success) {
+            alert("رمز جدید شما: " + data.new_password + "\nلطفاً با آن وارد شوید.");
+        } else {
+            alert(data.message);
+        }
+    });
   }
 
   function startGame(user) {
-    document.getElementById('auth-screen').classList.remove('active');
-    document.getElementById('main-app').classList.add('active');
+    document.getElementById('auth-screen').className = 'screen';
+    document.getElementById('main-app').className = 'screen active';
     updateUI(user);
     document.getElementById('ref_link').value = window.location.origin + "/?ref=" + encodeURIComponent(userEmail);
     
     setInterval(syncTaps, 5000);
-    setInterval(() => {
-        let current = parseFloat(document.getElementById('balance').innerText);
-        let gain = currentProfit / 3600;
+    setInterval(function() {
+        var current = parseFloat(document.getElementById('balance').innerText);
+        var gain = currentProfit / 3600;
         document.getElementById('balance').innerText = (current + gain).toFixed(3);
     }, 1000);
   }
@@ -422,10 +427,10 @@ html_game = """
     if(data.tap_power !== undefined) currentTapPower = data.tap_power;
     if(data.ref_count !== undefined) document.getElementById('ref_count').innerText = data.ref_count;
     
-    for(let i=1; i<=4; i++) {
-        let el = document.getElementById('lvl_card'+i);
+    for(var i=1; i<=4; i++) {
+        var el = document.getElementById('lvl_card'+i);
         if(el && data['card'+i] !== undefined) el.innerText = data['card'+i];
-        let costEl = document.getElementById('cost_card'+i);
+        var costEl = document.getElementById('cost_card'+i);
         if(costEl && data['card'+i] !== undefined) {
             costs['card'+i] = costs['card'+i] * Math.pow(1.5, data['card'+i]);
             costEl.innerText = Math.floor(costs['card'+i]);
@@ -438,89 +443,113 @@ html_game = """
     playCoinSound();
     createParticles(e);
 
-    let current = parseFloat(document.getElementById('balance').innerText);
+    var current = parseFloat(document.getElementById('balance').innerText);
     document.getElementById('balance').innerText = (current + currentTapPower).toFixed(3);
     unsyncedTaps += currentTapPower;
   }
 
-  async function syncTaps() {
+  function syncTaps() {
     if(unsyncedTaps <= 0) return;
-    const tapsToSend = unsyncedTaps;
+    var tapsToSend = unsyncedTaps;
     unsyncedTaps = 0; 
-    const data = await apiCall('/api/tap', {email: userEmail, power: tapsToSend});
-    if(!data.success) unsyncedTaps += tapsToSend;
+    apiCall('/api/tap', {email: userEmail, power: tapsToSend}, function(data) {
+        if(!data.success) unsyncedTaps += tapsToSend;
+    });
   }
 
   function createParticles(e) {
-    const rect = document.getElementById('tap-area').getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    for(let i=0; i<5; i++) {
-      let p = document.createElement('div');
+    var rect = document.getElementById('tap-area').getBoundingClientRect();
+    var x = e.clientX - rect.left;
+    var y = e.clientY - rect.top;
+    for(var i=0; i<5; i++) {
+      var p = document.createElement('div');
       p.className = 'particle';
       p.style.left = x + 'px';
       p.style.top = y + 'px';
-      p.style.setProperty('--x', (Math.random() - 0.5) * 200 + 'px');
-      p.style.setProperty('--y', (Math.random() - 0.5) * 200 - 50 + 'px');
+      p.style.background = 'gold';
+      p.style.position = 'absolute';
+      p.style.width = '10px';
+      p.style.height = '10px';
+      p.style.borderRadius = '50%';
+      p.style.transition = '0.5s';
       document.getElementById('tap-area').appendChild(p);
-      setTimeout(() => p.remove(), 500);
+      
+      setTimeout(function() {
+          p.style.transform = 'translate(' + ((Math.random() - 0.5) * 200) + 'px, ' + ((Math.random() - 0.5) * 200 - 50) + 'px)';
+          p.style.opacity = '0';
+      }, 10);
+      
+      setTimeout(function() { p.remove(); }, 500);
     }
   }
 
-  async function upgrade(type) {
-    const data = await apiCall('/api/upgrade', {email: userEmail, type: type, cost: costs[type]});
-    if(data.success) { updateUI(data); alert("Upgraded!"); }
-    else { alert(data.message); }
+  function upgrade(type) {
+    apiCall('/api/upgrade', {email: userEmail, type: type, cost: costs[type]}, function(data) {
+        if(data.success) { updateUI(data); alert("Upgraded!"); }
+        else { alert(data.message); }
+    });
   }
   
-  async function submitCipher() {
-    const code = document.getElementById('cipher_input').value;
-    const data = await apiCall('/api/cipher', {email: userEmail, code: code});
-    if(data.success) { alert("Correct! 500 TTN added."); updateUI(data); }
-    else { alert(data.message); }
-  }
-
-  async function spinWheel() {
-    const data = await apiCall('/api/spin', {email: userEmail});
-    if(data.success) { alert(data.result); updateUI(data); }
-    else { alert(data.message); }
-  }
-
-  async function submitKYC() {
-    const fname = document.getElementById('fname').value;
-    const lname = document.getElementById('lname').value;
-    const nid = document.getElementById('nid').value;
-    const phone = document.getElementById('phone').value;
-    if(!fname || !lname || !nid || !phone) return alert("Fill all fields");
-    const data = await apiCall('/api/kyc', {email: userEmail, fname, lname, nid, phone});
-    if(data.success) alert("KYC Submitted!");
-  }
-
-  async function requestWithdraw() {
-    const data = await apiCall('/api/withdraw_req', {email: userEmail});
-    alert(data.message);
-  }
-
-  async function loadLeaderboard() {
-    const res = await fetch('/api/leaderboard');
-    const data = await res.json();
-    let html = "";
-    data.forEach((u, i) => {
-      html += `<div class="leaderboard-item"><span>#${i+1} ${u.name}</span> <span style="color:var(--primary);">${u.balance.toFixed(1)} TTN</span></div>`;
+  function submitCipher() {
+    var code = document.getElementById('cipher_input').value;
+    apiCall('/api/cipher', {email: userEmail, code: code}, function(data) {
+        if(data.success) { alert("Correct! 500 TTN added."); updateUI(data); }
+        else { alert(data.message); }
     });
-    document.getElementById('leaderboard-list').innerHTML = html;
+  }
+
+  function spinWheel() {
+    apiCall('/api/spin', {email: userEmail}, function(data) {
+        if(data.success) { alert(data.result); updateUI(data); }
+        else { alert(data.message); }
+    });
+  }
+
+  function submitKYC() {
+    var fname = document.getElementById('fname').value;
+    var lname = document.getElementById('lname').value;
+    var nid = document.getElementById('nid').value;
+    var phone = document.getElementById('phone').value;
+    if(!fname || !lname || !nid || !phone) { alert("Fill all fields"); return; }
+    
+    apiCall('/api/kyc', {email: userEmail, fname: fname, lname: lname, nid: nid, phone: phone}, function(data) {
+        if(data.success) alert("KYC Submitted!");
+    });
+  }
+
+  function requestWithdraw() {
+    apiCall('/api/withdraw_req', {email: userEmail}, function(data) {
+        alert(data.message);
+    });
+  }
+
+  function loadLeaderboard() {
+    fetch('/api/leaderboard')
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        var html = "";
+        for(var i=0; i<data.length; i++) {
+            var u = data[i];
+            html += '<div class="leaderboard-item"><span>#' + (i+1) + ' ' + u.name + '</span> <span style="color:#ffaa00;">' + u.balance.toFixed(1) + ' TTN</span></div>';
+        }
+        document.getElementById('leaderboard-list').innerHTML = html;
+    });
   }
 
   function switchTab(tab, el) {
-    document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+    var tabs = document.querySelectorAll('.tab-content');
+    for(var i=0; i<tabs.length; i++) tabs[i].style.display = 'none';
     document.getElementById('tab-' + tab).style.display = 'block';
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    
+    var navs = document.querySelectorAll('.nav-item');
+    for(var i=0; i<navs.length; i++) navs[i].classList.remove('active');
     el.classList.add('active');
+    
     if(tab === 'top') loadLeaderboard();
   }
 
   function copyLink() {
-    const link = document.getElementById('ref_link');
+    var link = document.getElementById('ref_link');
     link.select();
     document.execCommand('copy');
     alert("Link copied!");
