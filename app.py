@@ -6,25 +6,36 @@ import threading
 import telebot
 from telebot import types
 from flask import Flask, request, jsonify
-import os
-import csv
 
 BOT_TOKEN = "8528248141:AAHjKBWXN5E7DWmMlCOkEFYB-kL1kyVTwmE"
 ADMIN_ID  = "2028533085"
 
 app = Flask(__name__)
 bot = telebot.TeleBot(BOT_TOKEN)
-SETTINGS = {"withdraw_active": True}
 
 def init_db():
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users (email TEXT PRIMARY KEY, password TEXT, balance REAL DEFAULT 0.0, profit_per_hour REAL DEFAULT 0.0, tap_power REAL DEFAULT 0.001, card1 INT DEFAULT 0, card2 INT DEFAULT 0, card3 INT DEFAULT 0, card4 INT DEFAULT 0, ref_count INTEGER DEFAULT 0, last_sync REAL DEFAULT 0, last_cipher REAL DEFAULT 0, is_bot INTEGER DEFAULT 0)''')
+    # دیتابیس بسیار ساده و مرتب
+    c.execute('''CREATE TABLE IF NOT EXISTS users (
+        email TEXT PRIMARY KEY, 
+        password TEXT, 
+        balance REAL DEFAULT 0.0, 
+        profit_per_hour REAL DEFAULT 0.0, 
+        tap_power REAL DEFAULT 0.001, 
+        card1 INT DEFAULT 0, 
+        card2 INT DEFAULT 0, 
+        card3 INT DEFAULT 0, 
+        card4 INT DEFAULT 0, 
+        last_sync REAL DEFAULT 0, 
+        ref_count INTEGER DEFAULT 0, 
+        is_bot INTEGER DEFAULT 0
+    )''')
     
-    # ساخت ربات‌های فیک
+    # ساخت ربات‌های فیک برای شلوغی لیدربورد
     c.execute("SELECT COUNT(*) FROM users WHERE is_bot=1")
     if c.fetchone()[0] == 0:
-        bots = [("CryptoKing", 15400.5), ("Satoshi_99", 8900.0), ("HamsterPro", 4500.2), ("TitanWhale", 12000.0), ("Ali_Tapper", 2300.5), ("MoonBoy", 1100.0)]
+        bots = [("CryptoKing", 15400.5), ("Satoshi_99", 8900.0), ("HamsterPro", 4500.2), ("TitanWhale", 12000.0)]
         for b in bots:
             c.execute("INSERT OR IGNORE INTO users (email, password, balance, is_bot, last_sync) VALUES (?, '123', ?, 1, ?)", (b[0]+"@bot.com", b[1], time.time()))
             
@@ -54,7 +65,7 @@ def bot_start(message):
     if str(message.chat.id) != ADMIN_ID: return
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(types.KeyboardButton('📊 آمار'), types.KeyboardButton('👥 کاربران'))
-    markup.add(types.KeyboardButton('⚙️ تنظیمات'), types.KeyboardButton('📥 دیتابیس'))
+    markup.add(types.KeyboardButton('📥 دیتابیس'))
     bot.reply_to(message, "👑 **پنل مدیریت تایتان‌تپ**", reply_markup=markup)
 
 @bot.message_handler(func=lambda message: message.text == '📊 آمار')
@@ -66,22 +77,6 @@ def bot_stats(message):
     data = c.fetchone()
     conn.close()
     bot.reply_to(message, f"👥 کاربران واقعی: {data[0]}\n💰 کل تپ‌کوین: {data[1]:.2f} TTN")
-
-@bot.message_handler(func=lambda message: message.text == '⚙️ تنظیمات')
-def bot_settings(message):
-    if str(message.chat.id) != ADMIN_ID: return
-    markup = types.InlineKeyboardMarkup()
-    status = "فعال 🟢" if SETTINGS["withdraw_active"] else "غیرفعال 🔴"
-    markup.add(types.InlineKeyboardButton(f"برداشت: {status}", callback_data="toggle_wd"))
-    bot.send_message(ADMIN_ID, "وضعیت برداشت:", reply_markup=markup)
-
-@bot.callback_query_handler(func=lambda call: True)
-def callback_query(call):
-    if str(call.from_user.id) != ADMIN_ID: return
-    if call.data == "toggle_wd":
-        SETTINGS["withdraw_active"] = not SETTINGS["withdraw_active"]
-        status = "فعال 🟢" if SETTINGS["withdraw_active"] else "غیرفعال 🔴"
-        bot.edit_message_text(f"وضعیت برداشت: {status}", call.message.chat.id, call.message.message_id, reply_markup=call.message.reply_markup)
 
 @bot.message_handler(func=lambda message: message.text == '👥 کاربران')
 def bot_users(message):
@@ -105,10 +100,12 @@ def bot_export(message):
     conn.close()
     filename = "users.csv"
     with open(filename, 'w', newline='', encoding='utf-8') as f:
+        import csv
         writer = csv.writer(f)
         writer.writerow(['Email', 'Password', 'Balance'])
         writer.writerows(users)
     with open(filename, 'rb') as f: bot.send_document(message.chat.id, f)
+    import os
     os.remove(filename)
 
 def run_bot(): bot.polling(none_stop=True)
@@ -160,7 +157,6 @@ html_game = """
 </div>
 
 <div id="game" class="hide">
-    <!-- MINE -->
     <div id="tab-mine">
         <div class="balance"><span id="balance">0.000</span> TTN</div>
         <div class="profit">+<span id="profit">0.00</span> TTN در ساعت</div>
@@ -171,7 +167,6 @@ html_game = """
         </div>
     </div>
 
-    <!-- CARDS -->
     <div id="tab-cards" class="hide">
         <h2>کارت‌های استخراج</h2>
         <div class="card"><div><b>ماینر</b><br><small>سطح <span id="lvl1">0</span></small></div><button onclick="buyCard(1)">خرید (<span id="cost1">100</span>)</button></div>
@@ -180,7 +175,6 @@ html_game = """
         <div class="card"><div><b>کوانتومی</b><br><small>سطح <span id="lvl4">0</span></small></div><button onclick="buyCard(4)">خرید (<span id="cost4">10000</span>)</button></div>
     </div>
 
-    <!-- TOP -->
     <div id="tab-top" class="hide">
         <h2>برترین‌ها 🏆</h2>
         <div id="leaderboard"></div>
@@ -339,14 +333,14 @@ def login():
     user = get_user(email)
     if not user or user[1] != password: return jsonify({"success": False, "message": "اطلاعات اشتباه است"})
     now = time.time()
-    if user[15] > 0: 
-        gain = ((now - user[15]) / 3600.0) * user[9] 
+    if user[9] > 0: 
+        gain = ((now - user[9]) / 3600.0) * user[3] 
         update_user(email, "balance = balance + ?, last_sync = ?", (gain, now))
         user = get_user(email)
     else:
         update_user(email, "last_sync = ?", (now,))
         user = get_user(email)
-    return jsonify({"success": True, "user": {"email": user[0], "balance": user[8], "profit_per_hour": user[9], "tap_power": user[10], "card1": user[11], "card2": user[12], "card3": user[13], "card4": user[14]}})
+    return jsonify({"success": True, "user": {"email": user[0], "balance": user[2], "profit_per_hour": user[3], "tap_power": user[4], "card1": user[5], "card2": user[6], "card3": user[7], "card4": user[8]}})
 
 @app.route('/api/tap', methods=['POST'])
 def tap():
@@ -357,18 +351,18 @@ def tap():
 def upgrade():
     data = request.json
     user = get_user(data['email'])
-    if user[8] < data['cost']: return jsonify({"success": False, "message": "موجودی کافی نیست"})
+    if user[2] < data['cost']: return jsonify({"success": False, "message": "موجودی کافی نیست"})
     p_add = {1: 10, 2: 60, 3: 300, 4: 1500}[data['card_id']]
     update_user(data['email'], f"balance = balance - ?, profit_per_hour = profit_per_hour + ?, card{data['card_id']} = card{data['card_id']} + 1", (data['cost'], p_add))
     user = get_user(data['email'])
-    return jsonify({"success": True, "user": {"email": user[0], "balance": user[8], "profit_per_hour": user[9], "tap_power": user[10], "card1": user[11], "card2": user[12], "card3": user[13], "card4": user[14]}})
+    return jsonify({"success": True, "user": {"email": user[0], "balance": user[2], "profit_per_hour": user[3], "tap_power": user[4], "card1": user[5], "card2": user[6], "card3": user[7], "card4": user[8]}})
 
 @app.route('/api/quest', methods=['POST'])
 def quest():
     email = request.json['email']
     update_user(email, "balance = balance + 500.0", ())
     user = get_user(email)
-    return jsonify({"success": True, "user": {"email": user[0], "balance": user[8], "profit_per_hour": user[9], "tap_power": user[10], "card1": user[11], "card2": user[12], "card3": user[13], "card4": user[14]}})
+    return jsonify({"success": True, "user": {"email": user[0], "balance": user[2], "profit_per_hour": user[3], "tap_power": user[4], "card1": user[5], "card2": user[6], "card3": user[7], "card4": user[8]}})
 
 @app.route('/api/leaderboard')
 def leaderboard():
