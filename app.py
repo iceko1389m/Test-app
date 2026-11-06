@@ -18,7 +18,6 @@ ADMIN_ID  = "2028533085"
 app = Flask(__name__)
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# تنظیمات کلی ربات
 SETTINGS = {
     "withdraw_active": True,
     "min_withdraw": 5000
@@ -58,7 +57,6 @@ def init_db():
 
 init_db()
 
-# ====== توابع کمکی ======
 def get_user(email):
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
@@ -81,7 +79,7 @@ def bot_start(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(types.KeyboardButton('📊 آمار ربات'), types.KeyboardButton('👥 لیست کاربران'))
     markup.add(types.KeyboardButton('⚙️ تنظیمات سیستم'), types.KeyboardButton('📥 دانلود دیتابیس'))
-    bot.reply_to(message, "👑 **پنل مدیریت تایتان‌تپ**\nبه پنل خوش آمدید. از دکمه‌های زیر استفاده کنید:", reply_markup=markup)
+    bot.reply_to(message, "👑 **پنل مدیریت تایتان‌تپ**\nبه پنل خوش آمدید:", reply_markup=markup)
 
 @bot.message_handler(func=lambda message: message.text == '📊 آمار ربات')
 def bot_stats(message):
@@ -216,10 +214,7 @@ html_game = """
 <div class="app-container">
   <div class="lang-toggle" onclick="toggleLang()">EN / FA</div>
   
-  <!-- AUTH SCREEN -->
   <div id="auth-screen" class="screen active">
-    
-    <!-- LOGIN -->
     <div id="login-form">
       <h1>🛡️ TitanTap</h1>
       <input type="email" id="login_email" data-fa="ایمیل" data-en="Email Address" placeholder="ایمیل">
@@ -229,7 +224,6 @@ html_game = """
       <span class="link-text" onclick="showForm('forgot-form')" style="color:#8892b0;" data-fa="رمز عبور را فراموش کرده‌اید؟" data-en="Forgot Password?">رمز عبور را فراموش کرده‌اید؟</span>
     </div>
 
-    <!-- REGISTER -->
     <div id="register-form" style="display:none;">
       <h1 data-fa="ثبت‌نام" data-en="Sign Up">ثبت‌نام</h1>
       <input type="email" id="reg_email" data-fa="ایمیل" data-en="Email Address" placeholder="ایمیل">
@@ -238,7 +232,6 @@ html_game = """
       <br><span class="link-text" onclick="showForm('login-form')" data-fa="قبلاً ثبت‌نام کرده‌اید؟ وارد شوید" data-en="Already have an account? Login">قبلاً ثبت‌نام کرده‌اید؟ وارد شوید</span>
     </div>
 
-    <!-- FORGOT -->
     <div id="forgot-form" style="display:none;">
       <h1 data-fa="فراموشی رمز" data-en="Forgot Password">فراموشی رمز</h1>
       <p style="font-size:13px; color:#8892b0; margin-bottom:15px;" data-fa="رمز جدید به صورت خودکار ساخته می‌شود." data-en="A new password will be generated.">رمز جدید به صورت خودکار ساخته می‌شود.</p>
@@ -246,13 +239,9 @@ html_game = """
       <button class="btn-action" onclick="forgotPass()" data-fa="بازیابی رمز" data-en="Reset Password">بازیابی رمز</button>
       <br><span class="link-text" onclick="showForm('login-form')" data-fa="بازگشت به صفحه ورود" data-en="Back to Login">بازگشت به صفحه ورود</span>
     </div>
-
   </div>
 
-  <!-- MAIN APP -->
   <div id="main-app" class="screen">
-    
-    <!-- MINE -->
     <div id="tab-mine" class="tab-content">
       <div class="balance-card">
         <div style="font-size:14px; color:#8892b0;" data-fa="موجودی شما" data-en="Your Balance">موجودی شما</div>
@@ -265,7 +254,6 @@ html_game = """
       <button class="btn-action btn-success" onclick="requestWithdraw()" data-fa="درخواست برداشت" data-en="Request Withdraw">درخواست برداشت</button>
     </div>
 
-    <!-- UPGRADES -->
     <div id="tab-upgrades" class="tab-content" style="display:none;">
       <h1 data-fa="کارت‌های استخراج" data-en="Mining Cards">کارت‌های استخراج</h1>
       <div class="cards-grid">
@@ -276,7 +264,6 @@ html_game = """
       </div>
     </div>
 
-    <!-- GAMES -->
     <div id="tab-games" class="tab-content" style="display:none;">
       <h1 data-fa="بازی‌ها و جوایز" data-en="Games & Rewards">بازی‌ها و جوایز</h1>
       <div class="spin-card">
@@ -292,7 +279,6 @@ html_game = """
       </div>
     </div>
 
-    <!-- FRIENDS (SQUADS) -->
     <div id="tab-friends" class="tab-content" style="display:none;">
       <h1 data-fa="جوخه (Squad)" data-en="Your Squad">جوخه (Squad)</h1>
       <div class="daily-card">
@@ -303,13 +289,11 @@ html_game = """
       </div>
     </div>
 
-    <!-- TOP -->
     <div id="tab-top" class="tab-content" style="display:none;">
       <h1 data-fa="لیدربورد" data-en="Leaderboard">لیدربورد</h1>
       <div id="leaderboard-list"></div>
     </div>
 
-    <!-- PROFILE / KYC -->
     <div id="tab-profile" class="tab-content" style="display:none;">
       <h1 data-fa="پروفایل و احراز هویت" data-en="Profile & KYC">پروفایل و احراز هویت</h1>
       <div class="kyc-card">
@@ -322,7 +306,6 @@ html_game = """
       </div>
     </div>
 
-    <!-- BOTTOM NAV -->
     <div class="bottom-nav">
       <div class="nav-item active" onclick="switchTab('mine', this)"><div class="nav-icon">🪙</div><span data-fa="استخراج" data-en="Mine">استخراج</span></div>
       <div class="nav-item" onclick="switchTab('upgrades', this)"><div class="nav-icon">🃏</div><span data-fa="کارت‌ها" data-en="Cards">کارت‌ها</span></div>
@@ -343,7 +326,26 @@ html_game = """
   let currentLang = 'fa';
   let unsyncedTaps = 0;
 
-  // Language Toggle
+  // Fix: Initialize audio context lazily to prevent crashes
+  let audioCtx = null;
+  function playCoinSound() {
+      try {
+          if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          if(audioCtx.state === 'suspended') audioCtx.resume();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(1800, audioCtx.currentTime + 0.1);
+          gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.1);
+      } catch(e) { console.log("Audio not supported"); }
+  }
+
   function toggleLang() {
     currentLang = currentLang === 'fa' ? 'en' : 'fa';
     document.body.dir = currentLang === 'fa' ? 'rtl' : 'ltr';
@@ -363,24 +365,6 @@ html_game = """
     document.getElementById(id).style.display = 'block';
   }
 
-  // Sound
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  function playCoinSound() {
-      if(audioCtx.state === 'suspended') audioCtx.resume();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(1800, audioCtx.currentTime + 0.1);
-      gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.1);
-  }
-
-  // API Calls
   async function apiCall(endpoint, data) {
     const res = await fetch(endpoint, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
     return await res.json();
@@ -389,6 +373,7 @@ html_game = """
   async function login() {
     const email = document.getElementById('login_email').value;
     const password = document.getElementById('login_password').value;
+    if(!email || !password) return alert("Fill all fields");
     const data = await apiCall('/api/login', {email, password});
     if(data.success) {
       userEmail = email;
@@ -399,6 +384,7 @@ html_game = """
   async function register() {
     const email = document.getElementById('reg_email').value;
     const password = document.getElementById('reg_password').value;
+    if(!email || !password) return alert("Fill all fields");
     const data = await apiCall('/api/register', {email, password});
     if(data.success) {
       userEmail = email;
@@ -408,6 +394,7 @@ html_game = """
 
   async function forgotPass() {
     const email = document.getElementById('forgot_email').value;
+    if(!email) return alert("Enter your email");
     const data = await apiCall('/api/forgot', {email});
     if(data.success) alert("رمز جدید شما: " + data.new_password + "\nلطفاً با آن وارد شوید.");
     else alert(data.message);
@@ -419,9 +406,7 @@ html_game = """
     updateUI(user);
     document.getElementById('ref_link').value = window.location.origin + "/?ref=" + encodeURIComponent(userEmail);
     
-    // Sync loop every 5 seconds
     setInterval(syncTaps, 5000);
-    // Profit loop
     setInterval(() => {
         let current = parseFloat(document.getElementById('balance').innerText);
         let gain = currentProfit / 3600;
@@ -454,7 +439,6 @@ html_game = """
     playCoinSound();
     createParticles(e);
 
-    // Offline Tap Logic (0 lag)
     let current = parseFloat(document.getElementById('balance').innerText);
     document.getElementById('balance').innerText = (current + currentTapPower).toFixed(3);
     unsyncedTaps += currentTapPower;
@@ -463,12 +447,9 @@ html_game = """
   async function syncTaps() {
     if(unsyncedTaps <= 0) return;
     const tapsToSend = unsyncedTaps;
-    unsyncedTaps = 0; // Reset early to prevent double sends
+    unsyncedTaps = 0; 
     const data = await apiCall('/api/tap', {email: userEmail, power: tapsToSend});
-    if(!data.success) {
-        // If failed, add back to unsynced
-        unsyncedTaps += tapsToSend;
-    }
+    if(!data.success) unsyncedTaps += tapsToSend;
   }
 
   function createParticles(e) {
@@ -554,7 +535,6 @@ html_game = """
 def index():
     return html_game
 
-# ================= API ROUTES =================
 @app.route('/api/register', methods=['POST'])
 def register():
     data = request.json
@@ -582,11 +562,10 @@ def login():
     
     if not user or user[2] != password: return jsonify({"success": False, "message": "Invalid credentials"})
     
-    # Calculate offline profit
     now = time.time()
-    if user[20] > 0: # last_sync index
+    if user[20] > 0: 
         elapsed_hours = (now - user[20]) / 3600.0
-        gain = elapsed_hours * user[11] # profit_per_hour index
+        gain = elapsed_hours * user[11] 
         update_user(email, "balance = balance + ?, last_sync = ?", (gain, now))
         user = get_user(email)
     else:
